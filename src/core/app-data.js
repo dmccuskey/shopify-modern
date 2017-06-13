@@ -53,7 +53,7 @@ const Collections = new CollectionsStore();  // need the semi here
 	getHtmlData( key )
 		.then( processHtmlData )
 		.then( setJsonData )
-		.catch( err => console.warn( "WARNING while loading Collections data:", err ) )
+		.catch( err => console.warn( `WARNING while loading '${key}':`, err ) )
 
 })( COLLECTIONS_DATA_ID, Collections )
 
@@ -68,7 +68,7 @@ const Errors = new ErrorsStore();  // need the semi here
 	getHtmlData( key )
 		.then( processHtmlData )
 		.then( setJsonData )
-		.catch( err => console.warn( "WARNING while loading Collections data:", err ) )
+		.catch( err => console.warn( `WARNING while loading '${key}':`, err ) )
 
 })( ERRORS_DATA_ID, Errors )
 
