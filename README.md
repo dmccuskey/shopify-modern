@@ -54,7 +54,7 @@ If you want to start integrating the ideas into an existing project, your main g
 
 1. insert app anchors into HTML
 
-	Depending on how far along you are with the transition, you can use one or many anchors which will be under control of your framework
+	Depending on how far along you are with the transition, you can use one or many anchors which will be under control of your framework (eg, Vuejs).
 
 	```
 		<!-- a single anchor for the entire app (like in this project) -->
@@ -71,7 +71,7 @@ If you want to start integrating the ideas into an existing project, your main g
 
 	use Webpack or Gulp to generate a typical build file, eg `dist/build.js`.
 
-	*Do NOT include any your front-end code in the Fluid templates*. All of it should be inside of `build.js`, and that file being sourced from `theme.liquid`.
+	*Do NOT include any of your front-end code in the Fluid templates*. All of it should be inside of `build.js`, and that file being sourced from `theme.liquid`.
 
 
 ## Setup
