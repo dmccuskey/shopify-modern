@@ -5,24 +5,31 @@
 <template>
 	<div>
 		<app-header />
-		<router-view></router-view>
-	</div>
 
+		<error-404-view v-if="Errors.is_error && Errors.type=='404'" />
+		<router-view v-else></router-view>
+
+	</div>
 </template>
 
 
 <script>
 	// Components
+	import Error404View from './views/Error404View'
 	import Header from './components/Header'
+	import { Errors } from './core/app-data'
+
 
 	export default {
 
 		components: {
-			AppHeader : Header
+			AppHeader : Header,
+			Error404View
 		},
 
 		data () {
 			return {
+				Errors
 			}
 		}
 	}

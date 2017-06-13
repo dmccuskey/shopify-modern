@@ -6,6 +6,7 @@
 
 // Components
 import { CollectionsStore } from './stores/collections-store'
+import { ErrorsStore } from './stores/errors-store'
 
 
 
@@ -41,8 +42,9 @@ function setJsonDataOnInstance( instance ) {
 
 // initialize Data Stores
 
+
 const COLLECTIONS_DATA_ID = 'collections-data'
-const Collections = new CollectionsStore();
+const Collections = new CollectionsStore();  // need the semi here
 
 (function( key, instance ) {
 
@@ -56,4 +58,20 @@ const Collections = new CollectionsStore();
 })( COLLECTIONS_DATA_ID, Collections )
 
 
-export { Collections }
+const ERRORS_DATA_ID = 'errors-data'
+const Errors = new ErrorsStore();  // need the semi here
+
+(function( key, instance ) {
+
+	const setJsonData = setJsonDataOnInstance( instance )
+
+	getHtmlData( key )
+		.then( processHtmlData )
+		.then( setJsonData )
+		.catch( err => console.warn( "WARNING while loading Collections data:", err ) )
+
+})( ERRORS_DATA_ID, Errors )
+
+
+
+export { Collections, Errors }
