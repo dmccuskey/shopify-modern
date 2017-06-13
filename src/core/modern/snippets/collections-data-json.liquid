@@ -1,0 +1,3 @@
+{%- if collection.products -%}
+{ "title": {{ collection.title | json }}, "products": {{ collection.products | json }} }
+{%- endif -%}
