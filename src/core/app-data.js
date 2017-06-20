@@ -7,6 +7,7 @@
 // Components
 import { CollectionsStore } from './stores/collections-store'
 import { ErrorsStore } from './stores/errors-store'
+import { ProductsStore } from './stores/products-store'
 
 
 
@@ -73,5 +74,20 @@ const Errors = new ErrorsStore();  // need the semi here
 })( ERRORS_DATA_ID, Errors )
 
 
+const PRODUCTS_DATA_ID = 'products-data'
+const Products = new ProductsStore();  // need the semi here
 
-export { Collections, Errors }
+(function( key, instance ) {
+
+	const setJsonData = setJsonDataOnInstance( instance )
+
+	getHtmlData( key )
+		.then( processHtmlData )
+		.then( setJsonData )
+		.catch( err => console.warn( `WARNING while loading '${key}':`, err ) )
+
+})( PRODUCTS_DATA_ID, Products )
+
+
+
+export { Collections, Errors, Products }
