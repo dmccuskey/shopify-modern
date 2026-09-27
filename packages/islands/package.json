@@ -13,7 +13,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./snippet": {
+      "types": "./dist/snippet.d.ts",
+      "import": "./dist/snippet.js"
     }
+  },
+  "bin": {
+    "islands": "./dist/cli.js"
   },
   "files": [
     "dist"

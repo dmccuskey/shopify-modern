@@ -9,9 +9,8 @@
 
       <div data-island="hello-island" data-island-id="{{ section.id }}">
         <p>This text is replaced when the Vue island mounts.</p>
-        <script type="application/json" data-island-props="{{ section.id }}">
-          { "name": {{ shop.name | json }} }
-        </script>
+        {%- capture props -%}{ "name": {{ shop.name | json }} }{%- endcapture -%}
+        {% render 'data-island', id: section.id, json: props %}
       </div>
 
       <p class="welcome-description">

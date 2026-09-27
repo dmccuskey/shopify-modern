@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "packages/islands" },
+    { "path": "packages/islands/tsconfig.node.json" },
     { "path": "packages/shopify" },
     { "path": "packages/vue" },
     { "path": "packages/vite-plugin" }

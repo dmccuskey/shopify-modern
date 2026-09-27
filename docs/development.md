@@ -20,7 +20,7 @@ npm run check
 | `npm run typecheck` | Builds the packages' types with `tsc -b`, checks the packages' tests (`tsconfig.test.json`), then checks the example theme with `vue-tsc` |
 | `npm test` | Unit tests with Vitest (`npm run test:watch` to rerun on changes) |
 | `npm run build` | Builds the packages into their `dist/` folders, then the example theme's assets |
-| `npm run theme-check` | Runs Shopify's Theme Check on the example theme. Run it after a build, because the layout renders the generated `vite-tag` snippet. |
+| `npm run theme-check` | Runs Shopify's Theme Check on the example theme. Run it after a build, because the theme renders the generated `vite-tag` and `data-island` snippets. |
 
 ### The Monorepo
 
