@@ -1,0 +1,16 @@
+package-lock.json
+dist/
+coverage/
+
+# Markdown follows the docs style guide, not Prettier
+*.md
+
+# the theme's own files: Liquid, and JSON that the theme editor rewrites
+examples/*/assets/
+examples/*/blocks/
+examples/*/config/
+examples/*/layout/
+examples/*/locales/
+examples/*/sections/
+examples/*/snippets/
+examples/*/templates/

@@ -1,0 +1,41 @@
+{
+  "name": "shopify-modern",
+  "private": true,
+  "description": "Islands for Shopify themes: JSON data islands, lazy-loaded components, theme editor support",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/islands",
+    "packages/shopify",
+    "packages/vue",
+    "packages/vite-plugin",
+    "examples/theme-vue"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "tsc -b && npm run build -w examples/theme-vue",
+    "dev": "tsc -b && npm run dev -w examples/theme-vue",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc -b && npm run typecheck -w examples/theme-vue",
+    "theme-check": "npm run theme-check -w examples/theme-vue",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run theme-check"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.11.1",
+    "globals": "^17.12.0",
+    "happy-dom": "^20.14.5",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.2"
+  }
+}

@@ -1,6 +1,40 @@
 # Development
 
-How to work on shopify-modern v2: branches, the roadmap, and ideas that aren't decided yet. Build and test steps are added here when the repository is scaffolded.
+How to work on shopify-modern v2: building and testing, branches, the roadmap, and ideas that aren't decided yet.
+
+## Build and Test
+
+You need Node 22.12 or newer (`node --version`). The repository's `.nvmrc` pins Node 22, so with [nvm](https://github.com/nvm-sh/nvm), run `nvm use` in the repository first.
+
+```bash
+npm install
+npm run check
+```
+
+`npm run check` runs everything CI runs, in order, and stops at the first failure:
+
+| Command | What it does |
+|---|---|
+| `npm run format:check` | Checks formatting with Prettier (`npm run format` fixes it). Markdown and the theme's Liquid and JSON are left out. |
+| `npm run lint` | ESLint on the TypeScript and Vue files |
+| `npm run typecheck` | Builds the packages' types with `tsc -b`, then checks the example theme with `vue-tsc` |
+| `npm test` | Unit tests with Vitest (`npm run test:watch` to rerun on changes) |
+| `npm run build` | Builds the packages into their `dist/` folders, then the example theme's assets |
+| `npm run theme-check` | Runs Shopify's Theme Check on the example theme. Run it after a build, because the layout renders the generated `vite-tag` snippet. |
+
+### The Monorepo
+
+The repository uses npm workspaces: the packages in `packages/` and the example theme in `examples/theme-vue/` (see [Packages](architecture.md#packages)). The example depends on the packages through the workspace, and imports their built `dist/` output, the same files users install, so build the packages (`npx tsc -b`) after changing them.
+
+### Running the Example Theme on a Store
+
+This needs a Shopify development store; one can be created for free with a [Shopify Partner](https://www.shopify.com/partners) account.
+
+1. Copy `examples/theme-vue/shopify.theme.example.toml` to `shopify.theme.toml` in the same folder, and set your store. The copy is gitignored.
+2. Run `npm run dev` from the repository root. It builds the packages, then starts the Vite dev server and `shopify theme dev` together. The Shopify CLI asks you to log in the first time.
+3. Open the preview URL that `shopify theme dev` prints (usually `http://127.0.0.1:9292`). Changes to Liquid and to the islands reload in the browser.
+
+`npm run deploy -w examples/theme-vue` builds the assets and runs `shopify theme push`.
 
 ## Branches
 

@@ -1,0 +1,28 @@
+{
+  "name": "@shopify-modern/vite-plugin",
+  "version": "0.0.0",
+  "description": "Vite plugin for shopify-modern: island registry and theme snippets",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dmccuskey/shopify-modern.git",
+    "directory": "packages/vite-plugin"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "peerDependencies": {
+    "vite": "^8.0.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.1"
+  }
+}

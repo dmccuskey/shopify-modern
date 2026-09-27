@@ -1,3 +1,11 @@
-node_modules
-dist
-config.yml
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# local configuration, never committed
+*.local.*
+.env
+
+# OS files
+.DS_Store
