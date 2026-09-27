@@ -1,0 +1,266 @@
+# Architecture
+
+How shopify-modern v2 works: Liquid renders the page, and small components ("islands") are mounted into it, fed by JSON data islands and built with Vite.
+
+> **Status:** this is the design for v2.0, written before the code. Sections are updated as each part is built. v2 is developed on the `v2` branch; the 2017 code is on [`legacy/v1`](https://github.com/dmccuskey/shopify-modern/tree/legacy/v1) and the tag [`v1`](https://github.com/dmccuskey/shopify-modern/tree/v1).
+
+## Summary and Goals
+
+v2 keeps Liquid in charge of the page and mounts small component islands into it. Each island reads its props from a JSON data island rendered by its own section. The 2017 version mounted one Vue app over the whole page with a client router; v2 drops that model because it breaks the theme editor, app blocks, SEO and Core Web Vitals (see [ADR 001](decisions/001-islands-in-a-liquid-first-theme.md)).
+
+**Goals**
+
+- Modern tooling inside a standard Online Store 2.0 theme: Vite, TypeScript, a component framework, hot reload, tests.
+- Full theme editor support: merchants edit sections and settings, and islands update live.
+- Server-rendered HTML first: every page is usable and indexable before JavaScript runs.
+- JavaScript only for the interactive parts, loaded per island, on demand.
+- A small, documented core (a data island reader and an island loader) that any OS 2.0 theme can adopt.
+
+**Non-goals**
+
+- A headless storefront or a full single-page app. Use [Hydrogen](https://hydrogen.shopify.dev/) or the Storefront API for that.
+- Replacing Liquid for content, layout or SEO markup.
+- Client-side routing between Shopify pages.
+
+**Frameworks.** The core has no framework dependency; each framework gets a small adapter ([ADR 002](decisions/002-framework-agnostic-core-and-nanostores.md)). v2.0 ships the Vue 3 adapter. React, Svelte and web component adapters follow in v2.1.
+
+## Overview
+
+Shopify renders every page in Liquid as usual, and JavaScript only enhances marked regions. There is no `#vueapp` root and no client router.
+
+```mermaid
+flowchart LR
+    liquid["Shopify renders Liquid<br/>(sections, settings, SEO)"]
+    html["HTML + data islands<br/>(JSON per section)"]
+    loader["Island loader<br/>(finds [data-island])"]
+    island["Island mounted<br/>(reads its JSON props)"]
+    editor["Theme editor<br/>(section load / unload)"]
+    ajax["Shopify Ajax APIs<br/>(cart, section rendering)"]
+
+    liquid --> html --> loader --> island
+    editor -- remount --> loader
+    island -- fetch --> ajax
+```
+
+1. A request reaches Shopify, which renders the layout and sections in Liquid. The HTML is complete and indexable.
+2. Each interactive section outputs a mount element (`<div data-island="cart-drawer">`) and a JSON data island for it.
+3. One small entry script (a few KB) finds the `[data-island]` elements and lazily imports only the components present on the page.
+4. Each island mounts through its framework adapter, reading its props from its data island. Shared state (cart, customer) lives in framework-neutral stores.
+5. Islands call Shopify's Ajax APIs for live changes. In the theme editor, section events unmount and remount the islands in that section.
+
+## Packages
+
+The repository is a monorepo of npm packages plus an example theme that installs them through the workspace, so the example uses exactly what users get ([ADR 003](decisions/003-monorepo-of-packages-and-example-theme.md)).
+
+| Package | Provides |
+|---|---|
+| `@shopify-modern/islands` (core) | `readProps`, island discovery, loading rules (`eager`, `visible`, `idle`, `interaction`), theme editor lifecycle, the adapter interface |
+| `@shopify-modern/shopify` | `formatMoney`, a typed Ajax Cart client, a Section Rendering fetch helper, locale lookup, and the shared `$cart`, `$customer` and `$locale` stores |
+| `@shopify-modern/vue` | The Vue 3 adapter (mount and unmount) and bindings for the stores |
+| `@shopify-modern/vite-plugin` | Builds the island registry from `src/islands/`, and writes the optional `data-island.liquid` snippet into the theme on every dev run and build |
+| `@shopify-modern/react`, `/svelte`, `/wc` | v2.1: the React, Svelte and web component adapters |
+
+```text
+shopify-modern/
+├── packages/
+│   ├── islands/          # core runtime, no framework imports
+│   ├── shopify/          # Shopify helpers and shared stores
+│   ├── vue/              # Vue 3 adapter
+│   └── vite-plugin/      # island registry and snippet generation
+├── examples/
+│   └── theme-vue/        # Shopify's skeleton theme with Vue islands
+└── docs/
+```
+
+**No Liquid file is required.** npm can't install Liquid files into a theme, so the runtime doesn't depend on one: the JSON tag can sit inside the island's own mount element. The `data-island.liquid` snippet is a convenience. The Vite plugin keeps it current, and themes that don't use Vite get it once from `npx @shopify-modern/islands init`. Setup for a user is `npm install`, one line in the Vite config, then writing components.
+
+**Any OS 2.0 theme.** Most stores run a Theme Store theme (Dawn or a paid one) or a custom theme started from Dawn, so the packages must drop into any OS 2.0 theme. The example theme is Shopify's minimal skeleton theme, so the pattern is easy to read ([ADR 005](decisions/005-example-theme-on-skeleton-any-theme-supported.md)).
+
+## Data Islands
+
+Each island gets its data from a JSON script tag rendered by its own section and keyed by the section's ID. This is the 2017 pattern, scoped per section instead of per page.
+
+**Liquid side:** the section renders the mount element, with server-rendered fallback markup, and its props:
+
+```liquid
+{%- comment -%} sections/product-form.liquid {%- endcomment -%}
+<div data-island="product-form" data-island-id="{{ section.id }}">
+  {%- comment -%} server-rendered fallback markup here {%- endcomment -%}
+</div>
+{%- capture props -%}{
+  "product": {
+    "id": {{ product.id }},
+    "title": {{ product.title | json }},
+    "variants": [{%- for v in product.variants -%}
+      {"id": {{ v.id }}, "price": {{ v.price }}, "available": {{ v.available }}, "options": {{ v.options | json }}}
+      {%- unless forloop.last -%},{%- endunless -%}
+    {%- endfor -%}]
+  },
+  "settings": {{ section.settings | json }}
+}{%- endcapture -%}
+{% render 'data-island', id: section.id, json: props %}
+```
+
+```liquid
+{%- comment -%} snippets/data-island.liquid {%- endcomment -%}
+<script type="application/json" data-island-props="{{ id }}">{{ json }}</script>
+```
+
+**JavaScript side:** a typed reader with no side effects on import:
+
+```ts
+export function readProps<T>(id: string): T | null {
+  const el = document.querySelector(`script[data-island-props="${id}"]`)
+  if (!el?.textContent?.trim()) return null
+  return JSON.parse(el.textContent) as T
+}
+```
+
+**Rules**
+
+- One data island per section instance. The key is `section.id`, so repeated sections never collide.
+- Serialize only what the island reads, as explicit shapes built in Liquid, not `| json` of whole objects. Data islands have a size budget per page ([ADR 006](decisions/006-data-island-payload-budgets.md)).
+- Data used by several islands (cart, customer, locale, money format) goes in one `data-island-props="global"` tag in `layout/theme.liquid`.
+- Missing data returns `null` without logging; islands handle it.
+- TypeScript types describe the JSON shapes. In v2.0, the types for `settings` are generated from each section's `{% schema %}`.
+
+## Island Runtime
+
+One loader maps island names to lazily imported components, mounts each island it finds, and keeps a handle to unmount it. It is the only code that runs on every page.
+
+```ts
+// the island registry, generated by the Vite plugin from src/islands/
+export const islands = {
+  'product-form': { load: () => import('./islands/ProductForm.vue'), adapter: vue },
+  'cart-drawer': { load: () => import('./islands/CartDrawer.vue'), adapter: vue },
+}
+```
+
+```ts
+// packages/islands (simplified)
+export interface Adapter {
+  mount(el: HTMLElement, component: unknown, props: object): () => void // returns unmount
+}
+
+const mounted = new Map<Element, () => void>()
+
+export async function mountIslands(root: ParentNode = document) {
+  for (const el of root.querySelectorAll<HTMLElement>('[data-island]')) {
+    if (mounted.has(el)) continue
+    const entry = islands[el.dataset.island!]
+    if (!entry) continue
+    const { default: component } = await entry.load()
+    const props = readProps(el.dataset.islandId!) ?? {}
+    mounted.set(el, entry.adapter.mount(el, component, props))
+  }
+}
+
+export function unmountIslands(root: ParentNode) {
+  for (const [el, unmount] of mounted) {
+    if (root.contains(el)) {
+      unmount()
+      mounted.delete(el)
+    }
+  }
+}
+```
+
+An adapter answers one question: how to mount and unmount a component on an element with props. Each is about 30 to 50 lines, the same model [Astro](https://docs.astro.build/en/concepts/islands/) uses.
+
+### Loading Rules
+
+Set per island with `data-island-load`:
+
+| Value | Mounts when | Use for |
+|---|---|---|
+| `eager` (default) | `DOMContentLoaded` | Above the fold, such as the product form |
+| `visible` | an `IntersectionObserver` reports it on screen | Below the fold, such as reviews and recommendations |
+| `idle` | `requestIdleCallback` fires | Not urgent, such as the cart drawer |
+| `interaction` | the first click, focus or hover | Heavy and rarely used, such as a size guide |
+
+### Theme Editor
+
+Shopify fires `shopify:section:load` and `shopify:section:unload` on `document` when a merchant edits a section, with the section element as `event.target`. The loader listens and calls `unmountIslands` or `mountIslands` on that element, so edits show live. `shopify:block:select` can be passed on to islands that need to reveal a block.
+
+### Progressive Enhancement
+
+Each mount element holds server-rendered fallback markup, for example a plain `<form action="/cart/add">`. The island replaces it on mount, so the page works before JavaScript loads and if it fails.
+
+## Dynamic Data and Shared State
+
+Islands never own page navigation. They fetch only what changes in place, from Shopify's theme endpoints, so no Storefront API token is needed.
+
+| Need | Endpoint | Returns |
+|---|---|---|
+| Add to, update and read the cart | Ajax Cart API: `/cart/add.js`, `/cart/change.js`, `/cart.js` | JSON |
+| Re-render a section after a change (cart count, filtered grid) | Section Rendering API: `?sections=<id>` or `?section_id=<id>` | HTML rendered by Liquid |
+| Custom JSON for one resource | An alternate template, `?view=data` (`templates/product.data.liquid`) | JSON |
+| Predictive search | `/search/suggest.json` | JSON |
+| Product recommendations | `/recommendations/products.json` | JSON |
+
+The alternate templates are named `data`, not `json`, because `product.json` is already the OS 2.0 template. They replace the 2017 `*.endpoint.liquid` templates.
+
+**Rule of thumb:** if the result is markup that Liquid already knows how to render, use the Section Rendering API and swap the HTML. Use JSON when the island renders the result itself.
+
+**Shared state.** Stores are [nanostores](https://github.com/nanostores/nanostores), which have bindings for Vue, React and Svelte, so islands written in different frameworks share them ([ADR 002](decisions/002-framework-agnostic-core-and-nanostores.md)). They are small and scoped to one domain: `$cart` (items, count, open or closed), `$customer` and `$locale`. They are seeded from the global data island and updated from the Ajax APIs, so a cart change in the product form updates the header's count at once. In v2.0, the runtime also watches `fetch` and XHR calls to `/cart/*` made by apps and refreshes `$cart` after each.
+
+**Money and translations.** Prices are formatted with the shop's `money_format` from the global data island, not a hardcoded `$`. Translations come from the theme's own `locales/*.json`, exposed to islands at build time, so there is one source of truth.
+
+## Build and Dev Workflow
+
+Vite builds each theme's source into its `assets/` folder, and Shopify CLI serves and syncs the theme. There is no copy step and no separate `dist/` theme.
+
+```text
+examples/theme-vue/
+├── assets/              # Vite output lands here (gitignored)
+├── config/  layout/  locales/
+├── sections/            # sections that host islands
+├── snippets/            # data-island.liquid, vite-tag.liquid (generated)
+├── templates/           # *.json templates and *.data.liquid endpoints
+├── src/
+│   ├── main.ts          # entry: starts the island loader
+│   └── islands/         # one component per island
+├── vite.config.ts
+└── package.json
+```
+
+| Concern | Choice | Note |
+|---|---|---|
+| Bundler | Vite with barrel's [`vite-plugin-shopify`](https://github.com/barrel/shopify-vite) | Writes hashed chunks to `assets/` and generates the snippet that emits the `<script>` tags, including the dev server's in development |
+| Theme sync and preview | Shopify CLI (`shopify theme dev`) | Local preview with hot reload of Liquid; replaces Themekit |
+| Language | TypeScript | |
+| State | nanostores | Shared across islands and frameworks |
+| Quality | ESLint, Prettier, `vue-tsc`, Theme Check | Theme Check lints the Liquid |
+| Tests | Vitest for the packages, Playwright for smoke tests on a dev store | |
+| CI | GitHub Actions | Lint, type check, tests, `shopify theme check`, data island budget |
+
+**Scripts (planned):** `npm run dev` runs Vite and `shopify theme dev` together, `npm run build` builds the production assets, and `npm run deploy` builds and runs `shopify theme push`.
+
+## What v2 Replaces
+
+Most of v1 carries over as ideas rather than code; the 2017 app was mostly stubs.
+
+| v1 piece | In v2 | Why |
+|---|---|---|
+| JSON data snippets (`*-data-script.liquid`) | **Kept** as a pattern, as one `data-island` snippet keyed by `section.id` | The core idea; scoping per section avoids collisions and works in the theme editor |
+| `app-data.js` loader | **Rewritten** as `readProps()`, with no side effects on import | Three copy-pasted loaders, warnings on every page |
+| `Product`, `Variant` and store models | **Replaced** by TypeScript types and nanostores | Variant writes weren't reactive; `setData` copied every field |
+| `*.endpoint.liquid` templates | **Kept**, renamed `*.data.liquid`, and used | They were never called |
+| `#vueapp` full-page mount and `vue-router` | **Dropped** | Breaks the theme editor, app blocks and SEO ([ADR 001](decisions/001-islands-in-a-liquid-first-theme.md)) |
+| Views (`HomeView`, `BlogView`, …) | **Dropped** | Placeholders; Liquid sections render these pages |
+| `ProductGridTile`, header search | **Ported** as islands where they need to be interactive, otherwise back to Liquid | |
+| `i18n.js` and `en-default.js` | **Replaced** by keys from the theme's `locales/*.json` | Duplicated strings, no interpolation |
+| `money` filter | **Replaced** by `formatMoney(cents, moneyFormat)` | Hardcoded `$` |
+| Vendored Slate theme (`src/core/shopify/`) | **Replaced** by Shopify's skeleton theme in the example | Slate is deprecated |
+| webpack 2, Babel 6, Themekit | **Replaced** by Vite and Shopify CLI | End of life |
+
+## Decisions
+
+The reasons behind the design are in the [architecture decision records](decisions/):
+
+- [ADR 001](decisions/001-islands-in-a-liquid-first-theme.md): islands in a Liquid-first theme, not a full-page single-page app
+- [ADR 002](decisions/002-framework-agnostic-core-and-nanostores.md): a framework-agnostic core with adapters, and nanostores for shared state
+- [ADR 003](decisions/003-monorepo-of-packages-and-example-theme.md): a monorepo of npm packages plus an example theme
+- [ADR 004](decisions/004-rewrite-in-the-same-repository.md): rewrite in the same repository, keeping v1 as a tag and a branch
+- [ADR 005](decisions/005-example-theme-on-skeleton-any-theme-supported.md): the example theme on Shopify's skeleton theme, with support for any OS 2.0 theme
+- [ADR 006](decisions/006-data-island-payload-budgets.md): data island payload budgets
