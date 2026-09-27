@@ -13,4 +13,4 @@
 #   /(templates|sections)/.*\.json/
 
 # Vite's build manifest, used only at build time
-assets/.vite/
+assets/.vite/*
