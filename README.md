@@ -1,5 +1,7 @@
 # shopify-modern
 
+> **v2 is in progress** on the [`v2` branch](https://github.com/dmccuskey/shopify-modern/tree/v2): a rebuild around islands in a Liquid-first theme, with Vite and Vue 3.
+
 This proof-of-concept shows a method of creating an ecommerce experience for Shopify by using modern front-end development tools and techniques, while still leveraging some of the beneficial features of the Shopify system & infrastructure.
 
 
