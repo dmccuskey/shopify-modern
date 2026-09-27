@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/islands" },
+    { "path": "packages/shopify" },
+    { "path": "packages/vue" },
+    { "path": "packages/vite-plugin" }
+  ]
+}

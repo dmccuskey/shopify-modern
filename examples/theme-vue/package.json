@@ -1,0 +1,30 @@
+{
+  "name": "@shopify-modern/example-theme-vue",
+  "private": true,
+  "description": "Example theme: Shopify's skeleton theme with Vue islands",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "type": "module",
+  "scripts": {
+    "dev": "run-p dev:vite dev:theme",
+    "dev:vite": "vite",
+    "dev:theme": "shopify theme dev",
+    "build": "vite build",
+    "typecheck": "vue-tsc --noEmit",
+    "theme-check": "shopify theme check --path . --fail-level error",
+    "deploy": "vite build && shopify theme push"
+  },
+  "dependencies": {
+    "@shopify-modern/islands": "*",
+    "@shopify-modern/vue": "*",
+    "vue": "^3.5.43"
+  },
+  "devDependencies": {
+    "@shopify-modern/vite-plugin": "*",
+    "@shopify/cli": "^4.8.2",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "npm-run-all2": "^9.0.3",
+    "vite": "^8.3.1",
+    "vite-plugin-shopify": "^5.0.0",
+    "vue-tsc": "^3.3.11"
+  }
+}

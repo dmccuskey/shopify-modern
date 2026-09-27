@@ -1,0 +1,4 @@
+# Copy to shopify.theme.toml (gitignored) and set your development store.
+# `shopify theme dev` and `shopify theme push` read it.
+[environments.default]
+store = "your-dev-store.myshopify.com"

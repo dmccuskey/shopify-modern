@@ -212,17 +212,20 @@ Vite builds each theme's source into its `assets/` folder, and Shopify CLI serve
 
 ```text
 examples/theme-vue/
-├── assets/              # Vite output lands here (gitignored)
-├── config/  layout/  locales/
+├── assets/              # the theme's own assets, plus Vite's output (vite-*, gitignored)
+├── blocks/  config/  layout/  locales/
 ├── sections/            # sections that host islands
-├── snippets/            # data-island.liquid, vite-tag.liquid (generated)
+├── snippets/            # data-island.liquid and vite-tag.liquid (generated, gitignored)
 ├── templates/           # *.json templates and *.data.liquid endpoints
 ├── src/
-│   ├── main.ts          # entry: starts the island loader
+│   ├── entrypoints/
+│   │   └── theme.ts     # entry: starts the island loader
 │   └── islands/         # one component per island
 ├── vite.config.ts
 └── package.json
 ```
+
+`layout/theme.liquid` loads the entry with `{% render 'vite-tag' with 'theme.ts' %}`. `vite-plugin-shopify` writes that snippet on every build, pointing at the hashed files, and on every dev run, pointing at the Vite dev server. Vite writes into `assets/`, which also holds the theme's own files, so the build doesn't empty it (`emptyOutDir: false`) and names its files `vite-*`.
 
 | Concern | Choice | Note |
 |---|---|---|
@@ -232,9 +235,9 @@ examples/theme-vue/
 | State | nanostores | Shared across islands and frameworks |
 | Quality | ESLint, Prettier, `vue-tsc`, Theme Check | Theme Check lints the Liquid |
 | Tests | Vitest for the packages, Playwright for smoke tests on a dev store | |
-| CI | GitHub Actions | Lint, type check, tests, `shopify theme check`, data island budget |
+| CI | GitHub Actions | Format, lint, type check, tests, build, Theme Check; the data island budget comes with the example's smoke tests |
 
-**Scripts (planned):** `npm run dev` runs Vite and `shopify theme dev` together, `npm run build` builds the production assets, and `npm run deploy` builds and runs `shopify theme push`.
+The commands are in [Development](development.md#build-and-test).
 
 ## What v2 Replaces
 

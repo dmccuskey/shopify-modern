@@ -1,0 +1,31 @@
+{
+  "name": "@shopify-modern/vue",
+  "version": "0.0.0",
+  "description": "Vue 3 adapter for shopify-modern islands",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dmccuskey/shopify-modern.git",
+    "directory": "packages/vue"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "dependencies": {
+    "@shopify-modern/islands": "*"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "vue": "^3.5.43"
+  }
+}

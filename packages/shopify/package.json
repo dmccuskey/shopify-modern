@@ -1,0 +1,22 @@
+{
+  "name": "@shopify-modern/shopify",
+  "version": "0.0.0",
+  "description": "Shopify helpers for islands: money formatting, Ajax Cart and Section Rendering clients, shared stores",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dmccuskey/shopify-modern.git",
+    "directory": "packages/shopify"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false
+}

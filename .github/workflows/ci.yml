@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [v2, master]
+  pull_request:
+    branches: [v2, master]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      # after the build, which generates the snippet the layout renders
+      - run: npm run theme-check
+        env:
+          SHOPIFY_CLI_NO_ANALYTICS: 1
