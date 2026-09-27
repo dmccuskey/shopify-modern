@@ -1,6 +1,6 @@
 # Development
 
-How to work on shopify-modern v2: branches, and ideas that aren't decided yet. Build and test steps are added here when the repository is scaffolded.
+How to work on shopify-modern v2: branches, the roadmap, and ideas that aren't decided yet. Build and test steps are added here when the repository is scaffolded.
 
 ## Branches
 
@@ -24,9 +24,47 @@ A branch holds one change, is tested, and is merged back into `v2` with `git mer
 
 At the v2.0 release, `v2` is merged into `master` once with `--no-ff` and tagged `v2.0.0`, and the `v2` branch is deleted. From then on, branches start from `master` and merge back into it.
 
+## Roadmap
+
+What v2 is planned to include, by release. There are no dates: releases ship when they're done. Features can move between releases once the core is in use.
+
+### v2.0
+
+| Feature | What it does | Why it matters |
+|---|---|---|
+| Core runtime | Data island props, loading rules, the theme editor lifecycle, and shared stores ([Architecture](architecture.md)) | The foundation; nothing maintained does all of this today |
+| Vue adapter | Mounts Vue 3 islands and binds the shared stores | Vue first; the other adapters follow in v2.1 ([ADR 002](decisions/002-framework-agnostic-core-and-nanostores.md)) |
+| Example theme | Shopify's skeleton theme with the `product-form` and `cart-drawer` islands, and smoke tests on a dev store | Shows the pattern end to end ([ADR 005](decisions/005-example-theme-on-skeleton-any-theme-supported.md)) |
+| Cart sync with apps | Watches `fetch` and XHR calls to `/cart/*` and refreshes the shared cart store after each | Apps change the cart behind the theme's back, leaving drawers and counts stale |
+| Typed props from section schemas | Reads each section's `{% schema %}` and generates TypeScript types for its `settings` | Autocomplete, and a renamed setting fails at build time instead of in the store |
+| Island inspector (development only) | An overlay showing each island's loading rule, props size, mount time and bundle size | Makes performance visible while building |
+
+### v2.1
+
+| Feature | What it does | Why it matters |
+|---|---|---|
+| React, Svelte and web component adapters | One adapter each, plus store bindings | Islands in any of these frameworks can share one page and one cart ([ADR 002](decisions/002-framework-agnostic-core-and-nanostores.md)) |
+| Live theme editor updates | Passes setting changes into running islands, handles `shopify:block:select`, and exposes design mode | Smoother editing than a full remount, such as pausing autoplay while editing |
+| Performance limits in CI | Budgets for data island size, JavaScript per island, and Lighthouse score, usable in any theme | Backs a claim of passing the Theme Store's performance checks ([ADR 006](decisions/006-data-island-payload-budgets.md)) |
+| Safe deploy | A `deploy` command and GitHub Action that pull the live `templates/*.json` and `config/settings_data.json` before pushing code | Stops deploys from wiping the merchant's theme editor changes ([forum thread](https://community.shopify.dev/t/optimizing-shopify-theme-development-with-vite-deployment-challenges-workflow-suggestions/9438)) |
+| "Add to Dawn" and "Add to Horizon" guides | Step-by-step adoption in Shopify's previous and current default themes | Shows v2 working in real themes, not only the example |
+
+### v2.2
+
+| Feature | What it does | Why it matters |
+|---|---|---|
+| Local development with fixtures | Snapshots real data island JSON, and renders islands locally or in Storybook | A faster loop than round trips to a store |
+| State-preserving section re-render | Merges HTML from the Section Rendering API into the page in place instead of replacing it | Filters and variant pickers keep their state (see [below](#state-preserving-section-re-render)) |
+| Theme app extension support | Runs the same runtime inside app blocks | Reaches app developers too ([forum thread](https://community.shopify.com/t/use-react-in-app-block-theme-extension/175347)) |
+| Docs for AI agents | `llms.txt`, copy-paste recipes, and a skill that scaffolds a section, island, types and fixtures | Agents are becoming a main way people adopt libraries |
+
+### State-Preserving Section Re-Render
+
+Themes refresh parts of a page with the Section Rendering API and usually set `innerHTML`. That resets open dropdowns, focus, scroll position and typed input, and destroys mounted islands. The fix is to merge the new HTML into the page in place, changing only what differs, for example with [idiomorph](https://github.com/bigskysoftware/idiomorph), which Hotwire Turbo uses. The merge skips the inside of mounted islands and passes changed JSON to them as new props. It's in v2.2 because it has edge cases (stable IDs for list items, third-party scripts) and needs a lot of testing in real stores.
+
 ## Possible Future Changes
 
-Ideas that are not decided. Each needs discussion and a concrete use case before it is worked on. Decided work is tracked in [GitHub issues](https://github.com/dmccuskey/shopify-modern/issues).
+Ideas that are not decided. Each needs discussion and a concrete use case before it is worked on. Decided work is in the [Roadmap](#roadmap).
 
 ### Write Markup Once
 

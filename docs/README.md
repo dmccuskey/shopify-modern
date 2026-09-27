@@ -9,8 +9,7 @@ shopify-modern v2 is being built on the `v2` branch. A Quick Start comes with th
 
 ## Contribute
 
-- [Development](development.md): branches and possible future changes
-- Planned work is tracked in [GitHub issues](https://github.com/dmccuskey/shopify-modern/issues)
+- [Development](development.md): branches, the [roadmap](development.md#roadmap), and possible future changes
 
 ## Project Structure
 
