@@ -137,33 +137,19 @@ export const islands = {
 ```
 
 ```ts
-// packages/islands (simplified)
-export interface Adapter {
-  mount(el: HTMLElement, component: unknown, props: object): () => void // returns unmount
-}
+// src/entrypoints/theme.ts
+import { startIslands } from '@shopify-modern/islands'
+import { islands } from './islands' // the registry above
 
-const mounted = new Map<Element, () => void>()
-
-export async function mountIslands(root: ParentNode = document) {
-  for (const el of root.querySelectorAll<HTMLElement>('[data-island]')) {
-    if (mounted.has(el)) continue
-    const entry = islands[el.dataset.island!]
-    if (!entry) continue
-    const { default: component } = await entry.load()
-    const props = readProps(el.dataset.islandId!) ?? {}
-    mounted.set(el, entry.adapter.mount(el, component, props))
-  }
-}
-
-export function unmountIslands(root: ParentNode) {
-  for (const [el, unmount] of mounted) {
-    if (root.contains(el)) {
-      unmount()
-      mounted.delete(el)
-    }
-  }
-}
+startIslands(islands)
 ```
+
+`startIslands` finds every `[data-island]` element once the DOM is ready and schedules it by its loading rule. When an island is due, the loader imports its component, reads its props with `readProps(el.dataset.islandId)` (`{}` if there are none), and calls the adapter's `mount`. It keeps each island's unmount function, so an island is never mounted twice. It returns `mountIslands(root)` and `unmountIslands(root)`, for code that adds or removes islands itself, and `stop()`.
+
+- **Unknown islands** (a name not in the registry) are skipped, so islands from other code can share the page.
+- **Failures are per island:** if a component fails to load or mount, the loader logs it with `console.error` and mounts the others. If it fails to load, the fallback markup stays.
+- **Unmounting cancels:** unmounting an island that is still waiting for its loading rule, or still loading, stops it from mounting.
+- A data island inside the mount element is replaced along with the fallback markup when the island mounts. The props are read first, but remounting the same element later finds no props; the theme editor always renders the section again, so this matters only for code that calls `mountIslands` itself.
 
 An adapter answers one question: how to mount and unmount a component on an element with props. Each is about 30 to 50 lines, the same model [Astro](https://docs.astro.build/en/concepts/islands/) uses.
 
@@ -175,12 +161,14 @@ Set per island with `data-island-load`:
 |---|---|---|
 | `eager` (default) | `DOMContentLoaded` | Above the fold, such as the product form |
 | `visible` | an `IntersectionObserver` reports it on screen | Below the fold, such as reviews and recommendations |
-| `idle` | `requestIdleCallback` fires | Not urgent, such as the cart drawer |
-| `interaction` | the first click, focus or hover | Heavy and rarely used, such as a size guide |
+| `idle` | `requestIdleCallback` fires (after 200 ms where it's missing, as in Safari) | Not urgent, such as the cart drawer |
+| `interaction` | the first click, focus or hover (`click`, `focusin`, `pointerenter`) | Heavy and rarely used, such as a size guide |
+
+An unknown value mounts eagerly, with a warning in the console. With `interaction`, the event that triggers the mount reaches the fallback markup, not the component, which isn't mounted yet.
 
 ### Theme Editor
 
-Shopify fires `shopify:section:load` and `shopify:section:unload` on `document` when a merchant edits a section, with the section element as `event.target`. The loader listens and calls `unmountIslands` or `mountIslands` on that element, so edits show live. `shopify:block:select` can be passed on to islands that need to reveal a block.
+Shopify fires `shopify:section:load` and `shopify:section:unload` when a merchant edits a section, with the section element as `event.target`, and they bubble to `document`. The loader listens there and calls `mountIslands` or `unmountIslands` on that element, so edits show live. `shopify:block:select` can be passed on to islands that need to reveal a block.
 
 ### Progressive Enhancement
 

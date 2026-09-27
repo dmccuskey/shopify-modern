@@ -19,7 +19,7 @@ To run it on a development store, see [Running the Example Theme on a Store](../
 The theme files come from [Shopify/skeleton-theme](https://github.com/Shopify/skeleton-theme) at commit `a4f32d3` (2026-02-26), under Shopify's license in [LICENSE.md](LICENSE.md). Changes from it:
 
 - `layout/theme.liquid` renders the `vite-tag` snippet, which loads the built scripts.
-- `sections/hello-world.liquid` has a `hello-island` mount element, a stand-in until the island loader exists.
+- `sections/hello-world.liquid` has a `hello-island` mount element, with its props (the shop's name) in a data island inside it.
 - `.shopifyignore` leaves out Vite's build manifest.
 
 To update from the skeleton theme, compare its files at a newer commit with these, and copy over the changes by hand.

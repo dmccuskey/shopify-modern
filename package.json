@@ -22,7 +22,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc -b && npm run typecheck -w examples/theme-vue",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json && npm run typecheck -w examples/theme-vue",
     "theme-check": "npm run theme-check -w examples/theme-vue",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run theme-check"
   },
