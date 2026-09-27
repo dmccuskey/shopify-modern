@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "lib": ["es2022"],
+    "types": ["node"]
+  },
+  "include": ["src/init.ts", "src/cli.ts", "src/snippet.ts"]
+}
