@@ -22,7 +22,7 @@ v2 keeps Liquid in charge of the page and mounts small component islands into it
 - Replacing Liquid for content, layout or SEO markup.
 - Client-side routing between Shopify pages.
 
-**Frameworks.** The core has no framework dependency; each framework gets a small adapter ([ADR 002](decisions/002-framework-agnostic-core-and-nanostores.md)). v2.0 ships the Vue 3 adapter. React, Svelte and web component adapters follow in v2.1.
+**Frameworks.** The core has no framework dependency; each framework gets a small adapter ([ADR 002](decisions/002-framework-agnostic-core-and-nanostores.md)). v2.0 ships the Vue 3 adapter. React, Svelte and web component adapters follow in v2.1 (see the [Roadmap](development.md#roadmap)).
 
 ## Overview
 
