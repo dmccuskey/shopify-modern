@@ -11,7 +11,8 @@ export interface Adapter {
 /** How to load one island: a lazy import of its component, and the adapter that mounts it. */
 export interface IslandEntry {
   load: () => Promise<{ default: unknown }>
-  adapter: Adapter
+  /** The adapter, or a lazy import of it, so a framework loads only on pages with its islands. */
+  adapter: Adapter | (() => Promise<Adapter>)
 }
 
 /** Island names, as used in `data-island="…"`, mapped to their entries. */
@@ -58,12 +59,15 @@ export function startIslands(registry: IslandRegistry): Islands {
 
     const mount = async () => {
       try {
-        const { default: component } = await entry.load()
+        const [{ default: component }, adapter] = await Promise.all([
+          entry.load(),
+          typeof entry.adapter === 'function' ? entry.adapter() : entry.adapter,
+        ])
         // unmounted or remounted while loading
         if (islands.get(el) !== dispose) return
         const id = el.dataset.islandId
         const props = (id ? readProps<object>(id) : null) ?? {}
-        unmount = entry.adapter.mount(el, component, props)
+        unmount = adapter.mount(el, component, props)
       } catch (error) {
         if (islands.get(el) === dispose) islands.delete(el)
         console.error(`[shopify-modern] island "${name}" failed to mount`, error)

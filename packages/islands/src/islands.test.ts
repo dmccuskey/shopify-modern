@@ -104,6 +104,33 @@ describe('startIslands', () => {
     )
   })
 
+  it('loads a lazy adapter with the component', async () => {
+    const loadAdapter = vi.fn(async () => adapter)
+    start('<div id="a" data-island="lazy"></div><div id="b" data-island="lazy"></div>', {
+      lazy: { load: async () => ({ default: 'Lazy' }), adapter: loadAdapter },
+    })
+    await settle()
+    expect(mounts.map((m) => m.el)).toEqual([island('a'), island('b')])
+    expect(loadAdapter).toHaveBeenCalledTimes(2)
+  })
+
+  it('logs an island whose adapter fails to load, and keeps its fallback markup', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    start('<div id="a" data-island="lazy"><p>fallback</p></div>', {
+      lazy: {
+        load: async () => ({ default: 'Lazy' }),
+        adapter: () => Promise.reject(new Error('404')),
+      },
+    })
+    await settle()
+    expect(mounts).toEqual([])
+    expect(island('a').innerHTML).toBe('<p>fallback</p>')
+    expect(error).toHaveBeenCalledWith(
+      '[shopify-modern] island "lazy" failed to mount',
+      expect.any(Error),
+    )
+  })
+
   it('does not mount an island unmounted while its component loads', async () => {
     let resolve: (module: { default: unknown }) => void = () => {}
     const islands = start('<div data-island="slow"></div>', {
