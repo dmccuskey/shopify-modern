@@ -61,8 +61,11 @@ test('the cart count comes from the global data island after a reload', async ({
   await expect(page.getByRole('dialog', { name: 'Cart' })).toBeVisible()
 
   const cartRequests: string[] = []
+  // the store's Ajax Cart API, not a module of the same name from the Vite dev server
+  const store = new URL(page.url()).origin
   page.on('request', (request) => {
-    if (new URL(request.url()).pathname.endsWith('/cart.js')) cartRequests.push(request.url())
+    const url = new URL(request.url())
+    if (url.origin === store && url.pathname.endsWith('/cart.js')) cartRequests.push(request.url())
   })
   await page.reload()
   // the drawer loads when the browser is idle; wait for it to replace the Liquid link
