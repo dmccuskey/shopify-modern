@@ -18,5 +18,9 @@
   "files": [
     "dist"
   ],
-  "sideEffects": false
+  "sideEffects": false,
+  "dependencies": {
+    "@shopify-modern/islands": "*",
+    "nanostores": "^1.5.4"
+  }
 }
