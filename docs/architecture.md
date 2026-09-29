@@ -194,9 +194,40 @@ The alternate templates are named `data`, not `json`, because `product.json` is 
 
 **Rule of thumb:** if the result is markup that Liquid already knows how to render, use the Section Rendering API and swap the HTML. Use JSON when the island renders the result itself.
 
-**Shared state.** Stores are [nanostores](https://github.com/nanostores/nanostores), which have bindings for Vue, React and Svelte, so islands written in different frameworks share them ([ADR 002](decisions/002-framework-agnostic-core-and-nanostores.md)). They are small and scoped to one domain: `$cart` (items, count, open or closed), `$customer` and `$locale`. They are seeded from the global data island and updated from the Ajax APIs, so a cart change in the product form updates the header's count at once. In v2.0, the runtime also watches `fetch` and XHR calls to `/cart/*` made by apps and refreshes `$cart` after each.
+`@shopify-modern/shopify` wraps the first two rows:
 
-**Money and translations.** Prices are formatted with the shop's `money_format` from the global data island, not a hardcoded `$`. Translations come from the theme's own `locales/*.json`, exposed to islands at build time, so there is one source of truth.
+| Function | Calls | Does |
+|---|---|---|
+| `refreshCart()` | `/cart.js` | Fetches the cart into `$cart` |
+| `addToCart(items)` | `/cart/add.js`, then `/cart.js` | Adds lines, returns them, and refreshes `$cart` |
+| `changeCart(change)`, `updateCart(update)`, `clearCart()` | `/cart/change.js`, `/cart/update.js`, `/cart/clear.js` | Change the cart, and put the cart returned into `$cart` |
+| `renderSections(ids, url?)` | `?sections=` | Returns the HTML of each section by ID, in the context of a page (the current one by default); five sections per request, as Shopify allows |
+| `renderSection(id, url?)` | `?section_id=` | Returns one section's HTML |
+
+The cart calls go under the locale's root URL (`/fr/cart/add.js` on a store with a French subfolder), as Shopify requires. The cart's types keep the API's own `snake_case` names, and list only the fields islands usually need. A refused change, such as a sold-out item, throws a `CartError` with Shopify's `description`, fit to show to the customer. When requests overlap, `$cart` keeps the cart from the one sent last, whichever order the responses arrive in.
+
+**Shared state.** Stores are [nanostores](https://github.com/nanostores/nanostores), which have bindings for Vue, React and Svelte, so islands written in different frameworks share them ([ADR 002](decisions/002-framework-agnostic-core-and-nanostores.md)). They are small and scoped to one domain: `$cart` (the cart, as the Ajax Cart API returns it), `$cartOpen` (whether the cart drawer is open), `$customer` and `$locale`. The cart functions above update `$cart`, so a cart change in the product form updates the header's count at once. In v2.0, the runtime also watches `fetch` and XHR calls to `/cart/*` made by apps and refreshes `$cart` after each.
+
+The stores are seeded from the global data island the first time an island uses one, not on import, so the package has no side effects. Without a cart in the global data island, the first use of `$cart` fetches `/cart.js`. The global data island is rendered once in `layout/theme.liquid`; every field is optional:
+
+```liquid
+{%- capture global_props -%}{
+  "locale": {
+    "language": {{ request.locale.iso_code | json }},
+    "country": {{ localization.country.iso_code | json }},
+    "currency": {{ cart.currency.iso_code | json }},
+    "moneyFormat": {{ shop.money_format | json }},
+    "rootUrl": {{ routes.root_url | json }}
+  },
+  "customer": {%- if customer -%}{"id": {{ customer.id }}, "email": {{ customer.email | json }}, "firstName": {{ customer.first_name | json }}, "lastName": {{ customer.last_name | json }}}{%- else -%}null{%- endif -%},
+  "cart": {{ cart | json }}
+}{%- endcapture -%}
+{% render 'data-island', id: 'global', json: global_props %}
+```
+
+`cart | json` is the same shape as `/cart.js`, without the `token`. On the example theme's empty cart, the whole island is about 500 bytes.
+
+**Money and translations.** Prices are formatted with `formatMoney(cents, moneyFormat)`, which defaults to the shop's `money_format` from `$locale`, not a hardcoded `$`. It handles all of Shopify's placeholders, such as `{{amount}}` and `{{amount_with_comma_separator}}`, and puts the sign first, as Liquid's `money` filter does (`-$1,234.56`). Translations come from the theme's own `locales/*.json`, exposed to islands at build time, so there is one source of truth.
 
 ## Build and Dev Workflow
 
