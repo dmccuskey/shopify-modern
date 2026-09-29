@@ -17,7 +17,8 @@
   <p>{{ product.description }}</p>
 </div>
 
-<div class="product-form">
+{% # The product-form island replaces the form below, its fallback, when it mounts %}
+<div class="product-form" data-island="product-form" data-island-id="{{ section.id }}">
   {% form 'product', product %}
     {% assign current_variant = product.selected_or_first_available_variant %}
 
@@ -39,6 +40,36 @@
     <input type="submit" value="Add to cart">
     {{ form | payment_button }}
   {% endform %}
+
+  {%- capture props -%}
+    {
+      "product": {
+        "options": {{ product.options | json }},
+        "hasOnlyDefaultVariant": {{ product.has_only_default_variant | json }},
+        "variants": [
+          {%- for variant in product.variants -%}
+            {
+              "id": {{ variant.id }},
+              "title": {{ variant.title | json }},
+              "price": {{ variant.price }},
+              "available": {{ variant.available | json }},
+              "options": {{ variant.options | json }}
+            }
+            {%- unless forloop.last %},{% endunless -%}
+          {%- endfor -%}
+        ]
+      },
+      "selectedVariantId": {{ product.selected_or_first_available_variant.id }},
+      "strings": {
+        "addToCart": {{ 'product.add_to_cart' | t | json }},
+        "soldOut": {{ 'product.sold_out' | t | json }},
+        "unavailable": {{ 'product.unavailable' | t | json }},
+        "quantity": {{ 'product.quantity' | t | json }},
+        "error": {{ 'cart.error' | t | json }}
+      }
+    }
+  {%- endcapture -%}
+  {% render 'data-island', id: section.id, json: props %}
 </div>
 
 {% schema %}
