@@ -30,6 +30,31 @@
   </head>
 
   <body>
+    {% # Data shared by every island: read by the stores in @shopify-modern/shopify %}
+    {%- capture global_props -%}
+      {
+        "locale": {
+          "language": {{ request.locale.iso_code | json }},
+          "country": {{ localization.country.iso_code | json }},
+          "currency": {{ cart.currency.iso_code | json }},
+          "moneyFormat": {{ shop.money_format | json }},
+          "rootUrl": {{ routes.root_url | json }}
+        },
+        "customer": {%- if customer -%}
+          {
+            "id": {{ customer.id }},
+            "email": {{ customer.email | json }},
+            "firstName": {{ customer.first_name | json }},
+            "lastName": {{ customer.last_name | json }}
+          }
+        {%- else -%}
+          null
+        {%- endif -%},
+        "cart": {{ cart | json }}
+      }
+    {%- endcapture -%}
+    {% render 'data-island', id: 'global', json: global_props %}
+
     {% sections 'header-group' %}
 
     {{ content_for_layout }}
