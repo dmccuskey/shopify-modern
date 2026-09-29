@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
 import { addToCart, CartError, formatMoney } from '@shopify-modern/shopify'
 import { useCartOpen, useLocale } from '@shopify-modern/vue'
 
@@ -30,6 +30,7 @@ const props = defineProps<{
   }
 }>()
 
+const root = useTemplateRef('root')
 const locale = useLocale()
 const cartOpen = useCartOpen()
 
@@ -62,8 +63,24 @@ watch(variant, (v) => {
   history.replaceState(history.state, '', url)
 })
 
+// The island sits inside the section's Liquid product form, next to the dynamic checkout buttons
+// ({{ form | payment_button }}), which read the variant and quantity from the form's id and quantity fields.
+// Handling the form's submit, rather than a click on the button, also catches Enter in the quantity field.
+let form: HTMLFormElement | null = null
+
+onMounted(() => {
+  form = root.value?.closest('form') ?? null
+  form?.addEventListener('submit', onSubmit)
+})
+onUnmounted(() => form?.removeEventListener('submit', onSubmit))
+
+function onSubmit(event: SubmitEvent): void {
+  event.preventDefault()
+  void add()
+}
+
 async function add(): Promise<void> {
-  if (!variant.value) return
+  if (!variant.value || adding.value) return
   adding.value = true
   error.value = ''
   try {
@@ -79,7 +96,9 @@ async function add(): Promise<void> {
 </script>
 
 <template>
-  <form class="product-form__island" @submit.prevent="add">
+  <div ref="root" class="product-form__island">
+    <input v-if="variant" type="hidden" name="id" :value="variant.id" />
+
     <template v-if="!product.hasOnlyDefaultVariant">
       <label v-for="(name, i) in product.options" :key="name">
         {{ name }}
@@ -93,7 +112,7 @@ async function add(): Promise<void> {
 
     <label>
       {{ strings.quantity }}
-      <input v-model.number="quantity" type="number" min="1" required />
+      <input v-model.number="quantity" type="number" name="quantity" min="1" required />
     </label>
 
     <button type="submit" :disabled="!variant?.available || adding" :aria-busy="adding">
@@ -101,7 +120,7 @@ async function add(): Promise<void> {
     </button>
 
     <p v-if="error" class="product-form__error" role="alert">{{ error }}</p>
-  </form>
+  </div>
 </template>
 
 <style>

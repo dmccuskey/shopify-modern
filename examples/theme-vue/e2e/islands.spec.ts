@@ -10,11 +10,13 @@ const products = {
   soldOut: process.env.PRODUCT_SOLD_OUT ?? 'the-out-of-stock-snowboard',
 }
 
+// The product-form island mounts inside the section's Liquid product form, next to the payment button.
+
 test('product-form picks a variant and adds it to the cart, which opens the drawer', async ({
   page,
 }) => {
   await page.goto(`/products/${products.variants}`)
-  const form = page.locator('[data-island="product-form"] form')
+  const form = page.locator('form:has([data-island="product-form"])')
   const select = form.getByRole('combobox').first()
   await expect(select).toBeVisible()
 
@@ -31,9 +33,31 @@ test('product-form picks a variant and adds it to the cart, which opens the draw
   await expect(page.locator('[data-island="cart-drawer"] > a sup')).toHaveText('1')
 })
 
+test('product-form keeps the dynamic checkout buttons in step with the chosen variant', async ({
+  page,
+}) => {
+  await page.goto(`/products/${products.variants}`)
+  const form = page.locator('form:has([data-island="product-form"])')
+  const select = form.getByRole('combobox').first()
+  await expect(select).toBeVisible()
+  await expect(form.locator('[data-shopify="payment-button"]')).toBeAttached()
+
+  await select.selectOption((await select.locator('option').allTextContents()).at(-1)!)
+  await expect(page).toHaveURL(/[?&]variant=\d+/)
+  const variant = new URL(page.url()).searchParams.get('variant')
+  await form.getByRole('spinbutton').fill('2')
+
+  // what the payment button reads when it's clicked
+  const fields = await form.evaluate((el: HTMLFormElement) => {
+    const data = new FormData(el)
+    return { id: data.getAll('id'), quantity: data.getAll('quantity') }
+  })
+  expect(fields).toEqual({ id: [variant], quantity: ['2'] })
+})
+
 test('cart-drawer changes the quantity and removes the line', async ({ page }) => {
   await page.goto(`/products/${products.single}`)
-  const form = page.locator('[data-island="product-form"] form')
+  const form = page.locator('form:has([data-island="product-form"])')
   await expect(form.getByRole('combobox')).toHaveCount(0)
   await form.getByRole('button', { name: 'Add to cart' }).click()
 
@@ -55,14 +79,17 @@ test('cart-drawer changes the quantity and removes the line', async ({ page }) =
 test('the cart count comes from the global data island after a reload', async ({ page }) => {
   await page.goto(`/products/${products.single}`)
   await page
-    .locator('[data-island="product-form"] form')
+    .locator('form:has([data-island="product-form"])')
     .getByRole('button', { name: 'Add to cart' })
     .click()
   await expect(page.getByRole('dialog', { name: 'Cart' })).toBeVisible()
 
   const cartRequests: string[] = []
+  // the store's Ajax Cart API, not a module of the same name from the Vite dev server
+  const store = new URL(page.url()).origin
   page.on('request', (request) => {
-    if (new URL(request.url()).pathname.endsWith('/cart.js')) cartRequests.push(request.url())
+    const url = new URL(request.url())
+    if (url.origin === store && url.pathname.endsWith('/cart.js')) cartRequests.push(request.url())
   })
   await page.reload()
   // the drawer loads when the browser is idle; wait for it to replace the Liquid link
@@ -74,6 +101,8 @@ test('the cart count comes from the global data island after a reload', async ({
 test('product-form shows a sold-out product as sold out', async ({ page }) => {
   await page.goto(`/products/${products.soldOut}`)
   await expect(
-    page.locator('[data-island="product-form"] form').getByRole('button', { name: 'Sold out' }),
+    page
+      .locator('form:has([data-island="product-form"])')
+      .getByRole('button', { name: 'Sold out' }),
   ).toBeDisabled()
 })

@@ -106,6 +106,8 @@ Each island gets its data from a JSON script tag rendered by its own section and
 <script type="application/json" data-island-props="{{ id }}">{{ json }}</script>
 ```
 
+**Forms that others read stay in Liquid.** An island replaces only its mount element's children. Shopify's dynamic checkout buttons (`{{ form | payment_button }}`) and some apps read the variant and quantity from the product form's `id` and `quantity` fields, and watch the form for changes. So an island that replaces a product form mounts inside the Liquid `{% form 'product' %}`, with the payment button outside its mount element, renders fields with the same names, and handles the form's `submit`. The example theme's `product-form` island does this.
+
 **JavaScript side:** a typed reader with no side effects on import:
 
 ```ts
