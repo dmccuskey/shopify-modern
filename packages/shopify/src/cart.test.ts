@@ -47,13 +47,16 @@ describe('cart client', () => {
     expect(stores.$cart.get()).toEqual(fullCart)
   })
 
-  it('throws a CartError with Shopify’s message, and leaves $cart alone', async () => {
-    fetch.mockResolvedValueOnce(
-      Response.json(
-        { status: 422, message: 'Cart Error', description: 'The product is already sold out.' },
-        { status: 422 },
-      ),
-    )
+  it('throws a CartError with Shopify’s message, and still refreshes $cart', async () => {
+    // a refused add can still add part of the quantity
+    fetch
+      .mockResolvedValueOnce(
+        Response.json(
+          { status: 422, message: 'Cart Error', description: 'The product is already sold out.' },
+          { status: 422 },
+        ),
+      )
+      .mockResolvedValueOnce(Response.json(fullCart))
     const error = await cart.addToCart({ id: 1 }).catch((e: unknown) => e)
     expect(error).toBeInstanceOf(cart.CartError)
     expect(error).toMatchObject({
@@ -61,8 +64,8 @@ describe('cart client', () => {
       message: 'Cart Error',
       description: 'The product is already sold out.',
     })
-    expect(fetch).toHaveBeenCalledOnce()
-    expect(stores.$cart.get()).toEqual(emptyCart)
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual(['/fr/cart/add.js', '/fr/cart.js'])
+    expect(stores.$cart.get()).toEqual(fullCart)
   })
 
   it('throws a CartError for a response that isn’t JSON', async () => {

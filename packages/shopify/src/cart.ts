@@ -124,15 +124,19 @@ export function refreshCart(): Promise<Cart> {
 
 /**
  * Adds one or more lines to the cart (`/cart/add.js`), then refreshes `$cart`.
- * Returns the lines added. Throws a `CartError` if Shopify refuses, for example when an item is sold out;
- * if only the refresh fails, the lines were added, so it logs the error instead.
+ * Returns the lines added. Throws a `CartError` if Shopify refuses, for example when an item is sold out.
+ * `$cart` is refreshed even then, because a refusal can still add part of the quantity
+ * ("Only 50 items were added to your cart due to availability."). A failed refresh is logged, not thrown.
  */
 export async function addToCart(items: CartAddItem | CartAddItem[]): Promise<CartItem[]> {
-  const added = await request<{ items: CartItem[] }>('/cart/add.js', {
-    items: Array.isArray(items) ? items : [items],
-  })
-  await refreshCart().catch((error: unknown) => console.error('[shopify-modern]', error))
-  return added.items
+  try {
+    const added = await request<{ items: CartItem[] }>('/cart/add.js', {
+      items: Array.isArray(items) ? items : [items],
+    })
+    return added.items
+  } finally {
+    await refreshCart().catch((error: unknown) => console.error('[shopify-modern]', error))
+  }
 }
 
 /** Changes one line's quantity or properties (`/cart/change.js`); quantity 0 removes it. Updates `$cart`. */
