@@ -208,6 +208,23 @@ The cart calls go under the locale's root URL (`/fr/cart/add.js` on a store with
 
 **Shared state.** Stores are [nanostores](https://github.com/nanostores/nanostores), which have bindings for Vue, React and Svelte, so islands written in different frameworks share them ([ADR 002](decisions/002-framework-agnostic-core-and-nanostores.md)). They are small and scoped to one domain: `$cart` (the cart, as the Ajax Cart API returns it), `$cartOpen` (whether the cart drawer is open), `$customer` and `$locale`. The cart functions above update `$cart`, so a cart change in the product form updates the header's count at once. In v2.0, the runtime also watches `fetch` and XHR calls to `/cart/*` made by apps and refreshes `$cart` after each.
 
+In a Vue island, `@shopify-modern/vue` binds the stores with composables built on [`@nanostores/vue`](https://github.com/nanostores/vue): `useCart()`, `useCustomer()` and `useLocale()` return read-only refs, and `useCartOpen()` returns a writable one, so it works with `v-model`. Each subscribes for the life of the component and unsubscribes when the island unmounts. Changes go through the cart functions, not the refs. `useStore` is re-exported for a theme's own stores.
+
+```vue
+<script setup lang="ts">
+import { useCart, useCartOpen } from '@shopify-modern/vue'
+
+const cart = useCart()
+const open = useCartOpen()
+</script>
+
+<template>
+  <button @click="open = true">Cart ({{ cart?.item_count ?? 0 }})</button>
+</template>
+```
+
+The store code is part of an island's bundle only when the island uses it; the adapter alone doesn't load it.
+
 The stores are seeded from the global data island the first time an island uses one, not on import, so the package has no side effects. Without a cart in the global data island, the first use of `$cart` fetches `/cart.js`. The global data island is rendered once in `layout/theme.liquid`; every field is optional:
 
 ```liquid
