@@ -17,7 +17,7 @@ npm run check
 |---|---|
 | `npm run format:check` | Checks formatting with Prettier (`npm run format` fixes it). Markdown and the theme's Liquid and JSON are left out. |
 | `npm run lint` | ESLint on the TypeScript and Vue files |
-| `npm run typecheck` | Builds the packages' types with `tsc -b`, checks the packages' tests (`tsconfig.test.json`), then checks the example theme with `vue-tsc` |
+| `npm run typecheck` | Builds the packages' types with `tsc -b`, checks the packages' tests (`tsconfig.test.json`), then checks the example theme with `vue-tsc` and its smoke tests with `tsc` |
 | `npm test` | Unit tests with Vitest (`npm run test:watch` to rerun on changes) |
 | `npm run build` | Builds the packages into their `dist/` folders, then the example theme's assets |
 | `npm run theme-check` | Runs Shopify's Theme Check on the example theme. Run it after a build, because the theme renders the generated `vite-tag` and `data-island` snippets. |
@@ -35,6 +35,10 @@ This needs a Shopify development store; one can be created for free with a [Shop
 3. Open the preview URL that `shopify theme dev` prints (usually `http://127.0.0.1:9292`). Changes to Liquid and to the islands reload in the browser.
 
 `npm run deploy -w examples/theme-vue` builds the assets and runs `shopify theme push`.
+
+### Smoke Tests
+
+`npm run test:e2e` runs Playwright smoke tests of the example theme's islands against the running preview: adding to the cart, the cart drawer, and a sold-out product. They need a store, so they aren't part of `npm run check` or CI. See [`examples/theme-vue/e2e/README.md`](../examples/theme-vue/e2e/README.md).
 
 ## Branches
 

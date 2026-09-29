@@ -17,7 +17,12 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.browser } },
   },
   {
-    files: ['*.config.{js,ts}', 'examples/*/*.config.{js,ts}', 'packages/vite-plugin/**'],
+    files: [
+      '*.config.{js,ts}',
+      'examples/*/*.config.{js,ts}',
+      'examples/*/e2e/**',
+      'packages/vite-plugin/**',
+    ],
     languageOptions: { globals: { ...globals.node } },
   },
   // last, so Prettier owns formatting

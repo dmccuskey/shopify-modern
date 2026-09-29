@@ -17,7 +17,13 @@
     "checkout": "Checkout",
     "title": "Cart",
     "update": "Update",
-    "remove": "Remove"
+    "remove": "Remove",
+    "empty": "Your cart is empty",
+    "close": "Close",
+    "subtotal": "Subtotal",
+    "error": "Something went wrong. Please try again.",
+    "decrease": "Decrease quantity",
+    "increase": "Increase quantity"
   },
   "customers": {
     "login": {
@@ -41,6 +47,12 @@
     "title": "This shop is private",
     "password": "Password",
     "enter": "Enter"
+  },
+  "product": {
+    "add_to_cart": "Add to cart",
+    "sold_out": "Sold out",
+    "unavailable": "Unavailable",
+    "quantity": "Quantity"
   },
   "search": {
     "title": "Search",

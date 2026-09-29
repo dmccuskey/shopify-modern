@@ -7,3 +7,7 @@ snippets/data-island.liquid
 # Shopify CLI: local state, and the store settings (copy shopify.theme.example.toml)
 .shopify/
 shopify.theme.toml
+
+# Playwright
+test-results/
+playwright-report/
