@@ -20,7 +20,9 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@shopify-modern/islands": "*"
+    "@nanostores/vue": "^1.1.0",
+    "@shopify-modern/islands": "*",
+    "@shopify-modern/shopify": "*"
   },
   "peerDependencies": {
     "vue": "^3.5.0"
