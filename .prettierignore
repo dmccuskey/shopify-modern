@@ -2,6 +2,10 @@ package-lock.json
 dist/
 coverage/
 
+# Playwright's output (ignored by examples/theme-vue/.gitignore, which Prettier doesn't read)
+test-results/
+playwright-report/
+
 # Markdown follows the docs style guide, not Prettier
 *.md
 

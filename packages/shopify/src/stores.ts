@@ -2,6 +2,7 @@ import { atom, onMount } from 'nanostores'
 import { readProps } from '@shopify-modern/islands'
 import type { Cart } from './cart.js'
 import { refreshCart } from './cart.js'
+import { watchCartRequests } from './sync.js'
 
 /** The shop's language, country, currency and money format for this request. */
 export interface Locale {
@@ -70,6 +71,8 @@ onMount($locale, seed)
 onMount($customer, seed)
 onMount($cart, () => {
   seed()
+  // keep $cart up to date when apps change the cart
+  watchCartRequests()
   // without a cart in the global data island, fetch it
   if (!$cart.get())
     refreshCart().catch((error: unknown) => console.error('[shopify-modern]', error))

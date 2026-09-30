@@ -106,3 +106,37 @@ test('product-form shows a sold-out product as sold out', async ({ page }) => {
       .getByRole('button', { name: 'Sold out' }),
   ).toBeDisabled()
 })
+
+test('the cart count follows cart changes made by apps, with fetch or XHR', async ({ page }) => {
+  await page.goto(`/products/${products.single}`)
+  const form = page.locator('form:has([data-island="product-form"])')
+  await expect(form.getByRole('button', { name: 'Add to cart' })).toBeVisible()
+  // the drawer loads when the browser is idle; wait for it to replace the Liquid link
+  await expect(page.getByRole('dialog', { name: 'Cart', includeHidden: true })).toBeAttached()
+  const count = page.locator('[data-island="cart-drawer"] > a sup')
+  await expect(count).toHaveCount(0)
+
+  // what an app does: call the Ajax Cart API itself, without the theme's cart client
+  const variant = await form.evaluate((el: HTMLFormElement) => new FormData(el).get('id'))
+  await page.evaluate(async (id) => {
+    await fetch('/cart/add.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, quantity: 1 }),
+    })
+  }, variant)
+  await expect(count).toHaveText('1')
+
+  await page.evaluate(
+    (id) =>
+      new Promise((resolve) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open('POST', '/cart/change.js')
+        xhr.setRequestHeader('Content-Type', 'application/json')
+        xhr.addEventListener('loadend', resolve)
+        xhr.send(JSON.stringify({ id, quantity: 3 }))
+      }),
+    variant,
+  )
+  await expect(count).toHaveText('3')
+})
