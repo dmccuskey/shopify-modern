@@ -84,17 +84,22 @@ export class CartError extends Error {
   }
 }
 
+/** The cart client's own requests, which the cart sync (sync.ts) leaves alone: they update `$cart` themselves. */
+export const ownRequests = new WeakSet<RequestInit>()
+
 // Responses can arrive out of order; only the newest request's cart is kept.
 let lastSent = 0
 let lastApplied = 0
 
 async function request<T>(path: string, body?: unknown): Promise<T> {
   const url = $locale.get().rootUrl.replace(/\/$/, '') + path
-  const response = await fetch(url, {
+  const init: RequestInit = {
     method: body === undefined ? 'GET' : 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
-  })
+  }
+  ownRequests.add(init)
+  const response = await fetch(url, init)
   const json: unknown = await response.json().catch(() => null)
   if (!response.ok) {
     const error = (json ?? {}) as { message?: string; description?: string | null }
