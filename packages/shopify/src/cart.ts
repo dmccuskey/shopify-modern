@@ -31,7 +31,7 @@ export interface CartItem {
 
 /** The cart, as `/cart.js` returns it. The fields most islands need; the API returns more. */
 export interface Cart {
-  /** missing from the cart in the global data island: Liquid's `cart | json` leaves it out */
+  /** missing from the cart in the global data island: the example theme's `cart-json` snippet leaves it out */
   token?: string
   note: string | null
   attributes: Record<string, string>

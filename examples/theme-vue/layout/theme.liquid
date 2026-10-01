@@ -50,7 +50,7 @@
         {%- else -%}
           null
         {%- endif -%},
-        "cart": {{ cart | json }}
+        "cart": {% render 'cart-json' %}
       }
     {%- endcapture -%}
     {% render 'data-island', id: 'global', json: global_props %}

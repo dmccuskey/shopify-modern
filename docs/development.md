@@ -50,7 +50,7 @@ When going back to `npm run dev`, the CLI can miss the dev version of `snippets/
 
 ### Smoke Tests
 
-`npm run test:e2e` runs Playwright smoke tests of the example theme's islands against the running preview: adding to the cart, the cart drawer, and a sold-out product. They need a store, so they aren't part of `npm run check` or CI. See [`examples/theme-vue/e2e/README.md`](../examples/theme-vue/e2e/README.md).
+`npm run test:e2e` runs Playwright smoke tests of the example theme's islands against the running preview: adding to the cart, the cart drawer, and a sold-out product. They also check the data island budget of [ADR 006](decisions/006-data-island-payload-budgets.md): the `script[data-island-props]` on each sample page, and on a product page with a full cart, add up to 30 KB or less. They need a store, so they aren't part of `npm run check` or CI. See [`examples/theme-vue/e2e/README.md`](../examples/theme-vue/e2e/README.md).
 
 ## Branches
 
