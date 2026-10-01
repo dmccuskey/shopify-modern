@@ -33,6 +33,7 @@ This needs a Shopify development store; one can be created for free with a [Shop
 1. Copy `examples/theme-vue/shopify.theme.example.toml` to `shopify.theme.toml` in the same folder, and set your store. The copy is gitignored.
 2. Run `npm run dev` from the repository root. It builds the packages, then starts the Vite dev server and `shopify theme dev` together. The Shopify CLI asks you to log in the first time.
 3. Open the preview URL that `shopify theme dev` prints (usually `http://127.0.0.1:9292`). Changes to Liquid and to the islands reload in the browser.
+4. The `◆ islands` button in the corner (or Alt+Shift+I) opens the [island inspector](architecture.md#island-inspector): each island's loading rule, mount time, props size and bundle size. Bundle sizes need a `npm run build` before `npm run dev`.
 
 `npm run deploy -w examples/theme-vue` builds the assets and runs `shopify theme push`.
 

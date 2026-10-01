@@ -1,8 +1,10 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { normalizePath, type Plugin, type ResolvedConfig, type ViteDevServer } from 'vite'
+import type { IslandSize } from '@pelagojs/islands/inspector'
 import { dataIslandSnippet, dataIslandSnippetFile } from '@pelagojs/islands/snippet'
 import { settingsTypes } from './settings.js'
+import { islandSizes, type OutputBundle } from './sizes.js'
 
 /** Where an adapter comes from: `import { [name] } from '[from]'`. */
 export interface AdapterImport {
@@ -29,6 +31,11 @@ export interface PelagoOptions {
    * so it must not match the theme's own assets. Default: `vite-`.
    */
   assetPrefix?: string
+  /**
+   * Show the island inspector, an overlay of each island's loading rule, props size, mount time and bundle size,
+   * in `vite dev`. Builds never include it. Default: `true`.
+   */
+  inspector?: boolean
 }
 
 const defaultAdapters: Record<string, AdapterImport> = {
@@ -55,6 +62,17 @@ export default function pelago(options: PelagoOptions = {}): Plugin {
     const { source, warnings } = settingsTypes(themeDir)
     for (const warning of warnings) config.logger.warn(`[pelago] ${warning}`)
     writeIfChanged(path.resolve(config.root, options.settingsTypes ?? 'src/sections.d.ts'), source)
+  }
+
+  const sizesFile = () => path.join(config.cacheDir, 'pelago-sizes.json')
+
+  /** The island sizes from the last build, if there was one. */
+  function readSizes(): Record<string, IslandSize> | undefined {
+    try {
+      return JSON.parse(readFileSync(sizesFile(), 'utf8')) as Record<string, IslandSize>
+    } catch {
+      return undefined
+    }
   }
 
   return {
@@ -99,7 +117,9 @@ export default function pelago(options: PelagoOptions = {}): Plugin {
 
     load(id) {
       if (id !== resolvedVirtualId) return
-      return registryModule(findIslands(islandsDir, adapters), adapters)
+      const islands = findIslands(islandsDir, adapters)
+      const inspector = config.command === 'serve' && options.inspector !== false
+      return registryModule(islands, adapters, inspector ? { sizes: readSizes() } : undefined)
     },
 
     configureServer(server) {
@@ -123,6 +143,14 @@ export default function pelago(options: PelagoOptions = {}): Plugin {
     },
 
     writeBundle(outputOptions, bundle) {
+      // for the inspector in the next `vite dev`
+      const islands = findIslands(islandsDir, adapters)
+      const sizes = islandSizes(
+        bundle as unknown as OutputBundle,
+        new Map(islands.map((island) => [island.file, island.name])),
+      )
+      writeIfChanged(sizesFile(), JSON.stringify(sizes, null, 2) + '\n')
+
       const outDir = outputOptions.dir
       if (!outDir || !assetPrefix || !existsSync(outDir)) return
       for (const file of readdirSync(outDir)) {
@@ -167,10 +195,14 @@ export function islandName(fileName: string): string {
     .toLowerCase()
 }
 
-/** The source of `virtual:islands`. Each adapter is imported lazily, so its framework loads only on pages with its islands. */
+/**
+ * The source of `virtual:islands`. Each adapter is imported lazily, so its framework loads only on pages with its islands.
+ * With `inspector`, it also starts the island inspector.
+ */
 export function registryModule(
   islands: IslandFile[],
   adapters: Record<string, AdapterImport>,
+  inspector?: { sizes?: Record<string, IslandSize> },
 ): string {
   const used = [...new Set(islands.map((island) => island.extension))]
   const adapterVars = new Map(used.map((extension, i) => [extension, `adapter${i}`]))
@@ -187,6 +219,10 @@ export function registryModule(
     )
   }
   lines.push('}')
+  if (inspector) {
+    const options = JSON.stringify({ islands: islands.map((island) => island.name), ...inspector })
+    lines.push(`import('@pelagojs/islands/inspector').then((m) => m.startInspector(${options}))`)
+  }
   return lines.join('\n') + '\n'
 }
 

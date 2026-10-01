@@ -155,3 +155,19 @@ test('hello-island shows the greeting from its section settings', async ({ page 
     `${props.greeting || 'Hello'} from ${props.name}, mounted by Vue.`,
   )
 })
+
+// The island inspector runs in `npm run dev` only; Playwright's locators reach into its shadow root.
+
+test('the island inspector lists the islands on the page, and opens with Alt+Shift+I', async ({
+  page,
+}) => {
+  await page.goto(`/products/${products.variants}`)
+  const inspector = page.locator('#pelago-inspector')
+  await expect(inspector.getByRole('button', { name: '◆ 2 islands' })).toBeVisible()
+
+  await page.keyboard.press('Alt+Shift+KeyI')
+  const row = inspector.getByRole('row').filter({ hasText: 'product-form' })
+  await expect(row).toContainText('eager')
+  await expect(row).toContainText(/\d+ ms/)
+  await expect(inspector).toContainText('Data islands on this page:')
+})

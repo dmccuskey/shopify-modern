@@ -54,16 +54,16 @@ The repository is a monorepo of npm packages plus an example theme that installs
 
 | Package | Provides |
 |---|---|
-| `@pelagojs/islands` (core) | `readProps`, island discovery, loading rules (`eager`, `visible`, `idle`, `interaction`), theme editor lifecycle, the adapter interface |
+| `@pelagojs/islands` (core) | `readProps`, island discovery, loading rules (`eager`, `visible`, `idle`, `interaction`), theme editor lifecycle, the adapter interface, and the island inspector (`@pelagojs/islands/inspector`, development only) |
 | `@pelagojs/shopify` | `formatMoney`, a typed Ajax Cart client, a Section Rendering fetch helper, locale lookup, and the shared `$cart`, `$customer` and `$locale` stores |
 | `@pelagojs/vue` | The Vue 3 adapter (mount and unmount) and bindings for the stores |
-| `@pelagojs/vite-plugin` | Builds the island registry from `src/islands/`, and writes the optional `data-island.liquid` snippet and the types of the section settings (`src/sections.d.ts`) into the theme on every dev run and build |
+| `@pelagojs/vite-plugin` | Builds the island registry from `src/islands/`, and writes the optional `data-island.liquid` snippet and the types of the section settings (`src/sections.d.ts`) into the theme on every dev run and build; starts the island inspector in dev and records each island's size at build |
 | `@pelagojs/react`, `/svelte`, `/wc` | v2.1: the React, Svelte and web component adapters |
 
 ```text
 shopify-modern/
 ├── packages/
-│   ├── islands/          # core runtime, no framework imports
+│   ├── islands/          # core runtime and island inspector, no framework imports
 │   ├── shopify/          # Shopify helpers and shared stores
 │   ├── vue/              # Vue 3 adapter
 │   └── vite-plugin/      # island registry, snippet and settings types generation
@@ -151,6 +151,8 @@ export const islands = {
 The adapter is imported lazily along with the component, so a page with no Vue islands doesn't load Vue, and the entry stays a few KB. A registry written by hand, for a theme without Vite, can pass the adapter itself instead of a function that imports it. Adding or deleting a file in `src/islands/` during `npm run dev` updates the registry and reloads the page. Components in subfolders of `src/islands/` aren't islands, so an island's parts can live next to it.
 
 `startIslands` finds every `[data-island]` element once the DOM is ready and schedules it by its loading rule. When an island is due, the loader imports its component (and its adapter, if that's lazy), reads its props with `readProps(el.dataset.islandId)` (`{}` if there are none), and calls the adapter's `mount`. It keeps each island's unmount function, so an island is never mounted twice. It returns `mountIslands(root)` and `unmountIslands(root)`, for code that adds or removes islands itself, and `stop()`.
+
+It also records when each island was scheduled, when its loading rule fired, and when it loaded and mounted, for the [island inspector](#island-inspector), and adds a `[pelago] <name>` measure to the browser's performance timeline for each mount, so islands show in DevTools' Performance panel. Both cost a few numbers per island, so they stay on in production.
 
 - **Unknown islands** (a name not in the registry) are skipped, so islands from other code can share the page.
 - **Failures are per island:** if a component fails to load or mount, the loader logs it with `console.error` and mounts the others. If it fails to load, the fallback markup stays.
@@ -281,7 +283,7 @@ export default defineConfig({
 })
 ```
 
-The plugin's options change the island folder, the adapter for each file extension, the theme folder, the built files' prefix, and whether it writes the snippet and the settings types, and where. See `PelagoOptions` in `packages/vite-plugin/src/index.ts`. TypeScript learns the type of `virtual:islands` from `"types": ["@pelagojs/vite-plugin/client"]` in the theme's `tsconfig.json`.
+The plugin's options change the island folder, the adapter for each file extension, the theme folder, the built files' prefix, whether it writes the snippet and the settings types, and where, and whether dev shows the island inspector. See `PelagoOptions` in `packages/vite-plugin/src/index.ts`. TypeScript learns the type of `virtual:islands` from `"types": ["@pelagojs/vite-plugin/client"]` in the theme's `tsconfig.json`.
 
 ### Settings Types
 
@@ -316,6 +318,21 @@ defineProps<{ name: string } & Pick<SectionSettings['hello-world'], 'greeting'>>
 ```
 
 Renaming or removing the `greeting` setting then fails the type check. The Liquid that builds the JSON is not checked against the types.
+
+### Island Inspector
+
+In `vite dev`, the plugin adds the island inspector to `virtual:islands`: a button in the corner of the page (`◆ 3 islands`) that opens a panel and outlines each island. Alt+Shift+I toggles it, and it remembers whether it was open. For each `[data-island]` on the page it shows:
+
+| Column | From |
+|---|---|
+| Rule | `data-island-load`, as the runtime scheduled it (`eager` for an unknown rule) |
+| Mount | Time from the loading rule firing to the adapter's `mount` returning; the tooltip splits it into load and mount, and the wait for the rule. Or `waiting`, `loading`, `failed`, and `not an island` for a name with no file in `src/islands/` |
+| Props | The size of the island's own data island |
+| Bundle | Gzipped size of the island's own code in the last `vite build`: its chunk, the chunks only it imports, and their CSS. Code the page loads anyway (the entry, the adapter and framework, chunks shared with other islands) isn't counted |
+
+Below the table it adds up every `script[data-island-props]` on the page, shared ones like `global` included, against the 30 KB budget of [ADR 006](decisions/006-data-island-payload-budgets.md).
+
+The bundle sizes come from the build: each `vite build` writes them to `node_modules/.vite/pelago-sizes.json`, and `vite dev` reads them when it starts, so they are as of the last build before `npm run dev`. The inspector is plain DOM in a shadow root, so the theme's CSS doesn't reach it and it needs no framework. Builds never include it; `pelago({ inspector: false })` turns it off in dev too. It is a separate entry of `@pelagojs/islands` because it reads the runtime's records, which aren't public API.
 
 | Concern | Choice | Note |
 |---|---|---|
