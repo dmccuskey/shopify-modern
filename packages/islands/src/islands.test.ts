@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { startIslands, type Adapter, type IslandRegistry, type Islands } from './islands.js'
+import { onRecordsChange, records } from './records.js'
 
 // a fake adapter that records mounts, and writes the props into the element
 const mounts: { el: HTMLElement; props: object }[] = []
@@ -37,6 +38,8 @@ beforeEach(() => {
 afterEach(() => {
   islands?.stop()
   islands = undefined
+  // failed islands stay recorded
+  records.clear()
   document.body.innerHTML = ''
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
@@ -275,5 +278,53 @@ describe('theme editor', () => {
     island('s1').dispatchEvent(new Event('shopify:section:load', { bubbles: true }))
     await settle()
     expect(mounts).toHaveLength(1)
+  })
+})
+
+describe('island records, for the inspector', () => {
+  it('records each island from scheduled to mounted', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    start('<div id="a" data-island="greeting" data-island-load="bogus"></div>')
+    const record = records.get(island('a'))
+    expect(record).toMatchObject({ el: island('a'), name: 'greeting', rule: 'eager' })
+    await settle()
+    const { scheduled, triggered, loaded, mounted } = record!
+    expect(scheduled).toBeLessThanOrEqual(triggered!)
+    expect(triggered).toBeLessThanOrEqual(loaded!)
+    expect(loaded).toBeLessThanOrEqual(mounted!)
+  })
+
+  it('measures each mount in the performance timeline', async () => {
+    const measure = vi.spyOn(performance, 'measure')
+    start('<div data-island="greeting"></div>')
+    await settle()
+    expect(measure).toHaveBeenCalledWith('[pelago] greeting', {
+      start: expect.any(Number),
+      end: expect.any(Number),
+      detail: { island: 'greeting', load: expect.any(Number), mount: expect.any(Number) },
+    })
+  })
+
+  it('keeps a failed island, marked failed', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    start('<div id="a" data-island="broken"></div>', {
+      broken: { load: () => Promise.reject(new Error('404')), adapter },
+    })
+    await settle()
+    expect(records.get(island('a'))).toMatchObject({ failed: true })
+    expect(records.get(island('a'))?.mounted).toBeUndefined()
+  })
+
+  it('forgets an island when it is unmounted, and tells the listeners', async () => {
+    const listener = vi.fn()
+    const stop = onRecordsChange(listener)
+    const islands = start('<div id="a" data-island="greeting"></div>')
+    await settle()
+    expect(listener).toHaveBeenCalled()
+    listener.mockClear()
+    islands.unmountIslands()
+    expect(records.has(island('a'))).toBe(false)
+    expect(listener).toHaveBeenCalledOnce()
+    stop()
   })
 })

@@ -1,4 +1,5 @@
 import { readProps } from './props.js'
+import { records, recordsChanged, type IslandRecord } from './records.js'
 
 /**
  * Mounts a component on an element. Each framework adapter implements this.
@@ -48,16 +49,26 @@ export function startIslands(registry: IslandRegistry): Islands {
     const entry = registry[name]
     if (!entry) return
 
+    const rule = loadingRule(el)
+    const record: IslandRecord = { el, name, rule, scheduled: performance.now() }
     let unmount: (() => void) | undefined
     let cancel = () => {}
     const dispose = () => {
       cancel()
       unmount?.()
       islands.delete(el)
+      if (records.get(el) === record) {
+        records.delete(el)
+        recordsChanged()
+      }
     }
     islands.set(el, dispose)
+    records.set(el, record)
+    recordsChanged()
 
     const mount = async () => {
+      record.triggered = performance.now()
+      recordsChanged()
       try {
         const [{ default: component }, adapter] = await Promise.all([
           entry.load(),
@@ -65,15 +76,21 @@ export function startIslands(registry: IslandRegistry): Islands {
         ])
         // unmounted or remounted while loading
         if (islands.get(el) !== dispose) return
+        record.loaded = performance.now()
         const id = el.dataset.islandId
         const props = (id ? readProps<object>(id) : null) ?? {}
         unmount = adapter.mount(el, component, props)
+        record.mounted = performance.now()
+        measure(record)
+        recordsChanged()
       } catch (error) {
         if (islands.get(el) === dispose) islands.delete(el)
+        record.failed = true
+        recordsChanged()
         console.error(`[pelago] island "${name}" failed to mount`, error)
       }
     }
-    cancel = whenReady(el, mount)
+    cancel = whenReady(el, rule, mount)
   }
 
   function mountIslands(root: ParentNode = document) {
@@ -120,14 +137,30 @@ function findIslands(root: ParentNode): HTMLElement[] {
   return found
 }
 
-/** Calls `mount` when the island's loading rule says so. Returns a function that cancels it. */
-function whenReady(el: HTMLElement, mount: () => void): () => void {
+/** The island's loading rule, from `data-island-load`: `eager` if it has none, or one that isn't known. */
+function loadingRule(el: HTMLElement): LoadingRule {
   const rule = el.dataset.islandLoad || 'eager'
-  if (!loadingRules.includes(rule)) {
-    console.warn(`[pelago] unknown data-island-load "${rule}", loading eagerly`)
-  }
+  if (loadingRules.includes(rule)) return rule as LoadingRule
+  console.warn(`[pelago] unknown data-island-load "${rule}", loading eagerly`)
+  return 'eager'
+}
 
-  switch (rule as LoadingRule) {
+/** Shows the island's load and mount in the browser's performance timeline (DevTools' Performance panel). */
+function measure({ name, triggered, loaded, mounted }: IslandRecord) {
+  try {
+    performance.measure(`[pelago] ${name}`, {
+      start: triggered,
+      end: mounted,
+      detail: { island: name, load: loaded! - triggered!, mount: mounted! - loaded! },
+    })
+  } catch {
+    // performance.measure with options is missing in old browsers
+  }
+}
+
+/** Calls `mount` when the island's loading rule says so. Returns a function that cancels it. */
+function whenReady(el: HTMLElement, rule: LoadingRule, mount: () => void): () => void {
+  switch (rule) {
     case 'visible': {
       const observer = new IntersectionObserver((entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {

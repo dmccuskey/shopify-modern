@@ -14,6 +14,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./inspector": {
+      "types": "./dist/inspector.d.ts",
+      "import": "./dist/inspector.js"
+    },
     "./snippet": {
       "types": "./dist/snippet.d.ts",
       "import": "./dist/snippet.js"

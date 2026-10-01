@@ -86,6 +86,18 @@ describe('registryModule', () => {
     )
   })
 
+  it('starts the inspector when asked, with the island names and sizes', () => {
+    const code = registryModule(
+      [{ name: 'product-form', file: '/theme/src/islands/ProductForm.vue', extension: '.vue' }],
+      adapters,
+      { sizes: { 'product-form': { size: 100, gzip: 50 } } },
+    )
+    expect(code).toContain(
+      `import('@pelagojs/islands/inspector').then((m) => m.startInspector({"islands":["product-form"],"sizes":{"product-form":{"size":100,"gzip":50}}}))`,
+    )
+    expect(registryModule([], adapters)).not.toContain('inspector')
+  })
+
   it('rejects an adapter name that is not an identifier', () => {
     const island = { name: 'a', file: '/a.vue', extension: '.vue' }
     expect(() =>
@@ -160,6 +172,34 @@ describe('build', () => {
       ],
     })
     expect(existsSync(path.join(theme, 'src/sections.d.ts'))).toBe(false)
+  })
+
+  it('records the size of each island, without the code it shares', async () => {
+    setUpTheme()
+    // so Vite's cache is in node_modules/.vite, as in a theme
+    write('package.json', '{}')
+    write('src/shared.js', `export const shared = "${'s'.repeat(2000)}"`)
+    write('src/only-cart.js', `export const onlyCart = "${'c'.repeat(3000)}"`)
+    write('src/islands/cart.css', `.cart { color: red; }`)
+    write(
+      'src/islands/CartDrawer.js',
+      "import { shared } from '../shared.js'\nimport { onlyCart } from '../only-cart.js'\nimport './cart.css'\nexport default shared + onlyCart",
+    )
+    write(
+      'src/islands/ProductForm.js',
+      "import { shared } from '../shared.js'\nexport default shared",
+    )
+    await buildTheme()
+
+    const sizes = JSON.parse(
+      readFileSync(path.join(theme, 'node_modules/.vite/pelago-sizes.json'), 'utf8'),
+    )
+    expect(Object.keys(sizes)).toEqual(['cart-drawer', 'product-form'])
+    // the cart's own code is in its size, the code shared with the product form isn't
+    expect(sizes['cart-drawer'].size).toBeGreaterThan(3000)
+    expect(sizes['cart-drawer'].size).toBeLessThan(5000)
+    expect(sizes['product-form'].size).toBeLessThan(1000)
+    expect(sizes['cart-drawer'].gzip).toBeLessThan(sizes['cart-drawer'].size)
   })
 
   it('keeps the files of the current build when built again', async () => {
