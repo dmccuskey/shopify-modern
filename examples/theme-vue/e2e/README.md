@@ -1,6 +1,6 @@
 # Smoke Tests
 
-Playwright tests for the example theme's islands, run in a real browser against a store. They check that the islands mount and work with Shopify's real Ajax Cart API; the packages' logic is covered by the unit tests (`npm test`).
+Playwright tests for the example theme's islands, run in a real browser against a store. They check that the islands mount and work with Shopify's real Ajax Cart API; the packages' logic is covered by the unit tests (`npm test`). `budget.spec.ts` checks the data island budget of [ADR 006](../../../docs/decisions/006-data-island-payload-budgets.md): the `script[data-island-props]` on each sample page add up to 30 KB or less, read from the HTML as served. Each test notes the page's data islands and their sizes in its annotations, which the HTML report shows (`npm run test:e2e -- --reporter=html`).
 
 They need a development store and the Shopify CLI's login, so they aren't part of `npm run check` or CI. To run them:
 
