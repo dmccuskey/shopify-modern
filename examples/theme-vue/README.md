@@ -21,7 +21,7 @@ To run it on a development store, see [Running the Example Theme on a Store](../
 
 The theme files come from [Shopify/skeleton-theme](https://github.com/Shopify/skeleton-theme) at commit `a4f32d3` (2026-02-26), under Shopify's license in [LICENSE.md](LICENSE.md). Changes from it:
 
-- `layout/theme.liquid` renders the `vite-tag` snippet, which loads the built scripts, and the global data island (locale, customer and cart), read by the stores in `@pelagojs/shopify`.
+- `layout/theme.liquid` renders the `vite-tag` snippet, which loads the built scripts, and the global data island (locale, customer and cart), read by the stores in `@pelagojs/shopify`. The cart's JSON comes from the new `snippets/cart-json.liquid`, with only the fields of the `Cart` type.
 - `sections/product.liquid`: the product form is the fallback of the `product-form` island, which has one select per option (none for a product with only the default variant), the price, quantity, and add to cart without a reload, then opens the cart drawer. Its props are the options and variants, the selected variant and the strings. The island's mount element is inside the Liquid form, and the dynamic checkout buttons (`payment_button`) stay outside it: the island renders the form's `id` and `quantity` fields, which the buttons read, and handles the form's submit.
 - `sections/header.liquid`: the cart link is the fallback of the `cart-drawer` island (loaded when the browser is idle), which keeps the link and count and adds a drawer, a native `<dialog>`, with the lines, quantity buttons, the subtotal and checkout.
 - `locales/en.default.json` has strings for the islands: `product.*` and more `cart.*`. The islands get them through their props, translated by Liquid.

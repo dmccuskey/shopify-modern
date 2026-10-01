@@ -1,0 +1,55 @@
+{% doc %}
+  Renders the cart as JSON for the global data island: the fields of the Cart type in
+  @pelagojs/shopify, named as /cart.js names them. `cart | json` would add every field of
+  the Ajax Cart API, about 1.5 KB per line (ADR 006: explicit shapes, not `| json`).
+  One difference: `image` is on the shop's own CDN path (`/cdn/shop/files/…`), which serves
+  the same file and takes the same `width` parameter as /cart.js's `cdn.shopify.com` URL.
+
+  @example
+  "cart": {% render 'cart-json' %}
+{% enddoc %}
+{
+"note": {{ cart.note | json }},
+"attributes": {{ cart.attributes | json }},
+"item_count": {{ cart.item_count }},
+"items": [
+{%- for item in cart.items -%}
+  {
+  "id": {{ item.variant_id }},
+  "key": {{ item.key | json }},
+  "quantity": {{ item.quantity }},
+  "variant_id": {{ item.variant_id }},
+  "product_id": {{ item.product_id }},
+  "title": {{ item.title | json }},
+  "product_title": {{ item.product.title | json }},
+  "variant_title": {% if item.product.has_only_default_variant %}null{% else %}{{ item.variant.title | json }}{% endif %},
+  "handle": {{ item.product.handle | json }},
+  "url": {{ item.url | json }},
+  "image": {% if item.image %}{{ item.image | image_url | prepend: 'https:' | json }}{% else %}null{% endif %},
+  "sku": {{ item.sku | json }},
+  "vendor": {{ item.vendor | json }},
+  "price": {{ item.price }},
+  "original_price": {{ item.original_price }},
+  "final_price": {{ item.final_price }},
+  "line_price": {{ item.line_price }},
+  "original_line_price": {{ item.original_line_price }},
+  "final_line_price": {{ item.final_line_price }},
+  "properties": {% if item.properties.size > 0 %}{{ item.properties | json }}{% else %}{}{% endif %},
+  "options_with_values": [
+  {%- for option in item.options_with_values -%}
+    {"name": {{ option.name | json }}, "value": {{ option.value | json }}}
+    {%- unless forloop.last %},{% endunless -%}
+  {%- endfor -%}
+  ],
+  "requires_shipping": {{ item.requires_shipping }}
+  }
+  {%- unless forloop.last %},{% endunless -%}
+{%- endfor -%}
+],
+"currency": {{ cart.currency.iso_code | json }},
+"total_price": {{ cart.total_price }},
+"original_total_price": {{ cart.original_total_price }},
+"items_subtotal_price": {{ cart.items_subtotal_price }},
+"total_discount": {{ cart.total_discount }},
+"requires_shipping": {{ cart.requires_shipping }}
+}

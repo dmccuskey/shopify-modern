@@ -243,12 +243,12 @@ The stores are seeded from the global data island the first time an island uses 
     "rootUrl": {{ routes.root_url | json }}
   },
   "customer": {%- if customer -%}{"id": {{ customer.id }}, "email": {{ customer.email | json }}, "firstName": {{ customer.first_name | json }}, "lastName": {{ customer.last_name | json }}}{%- else -%}null{%- endif -%},
-  "cart": {{ cart | json }}
+  "cart": {% render 'cart-json' %}
 }{%- endcapture -%}
 {% render 'data-island', id: 'global', json: global_props %}
 ```
 
-`cart | json` is the same shape as `/cart.js`, without the `token`. On the example theme's empty cart, the whole island is about 500 bytes.
+The `cart-json` snippet builds the cart with the fields of the `Cart` type, named and shaped as `/cart.js` has them, apart from the `token` and the image URLs, which are on the shop's own CDN path. `cart | json` would serialize every field of the Ajax Cart API, about 1.5 KB per line, against [ADR 006](decisions/006-data-island-payload-budgets.md)'s explicit shapes; the snippet is about 750 bytes per line. On the example theme's empty cart, the whole island is about 450 bytes.
 
 **Money and translations.** Prices are formatted with `formatMoney(cents, moneyFormat)`, which defaults to the shop's `money_format` from `$locale`, not a hardcoded `$`. It handles all of Shopify's placeholders, such as `{{amount}}` and `{{amount_with_comma_separator}}`, and puts the sign first, as Liquid's `money` filter does (`-$1,234.56`). Translations come from the theme's own `locales/*.json`, exposed to islands at build time, so there is one source of truth.
 

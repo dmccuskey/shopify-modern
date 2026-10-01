@@ -171,3 +171,43 @@ test('the island inspector lists the islands on the page, and opens with Alt+Shi
   await expect(row).toContainText(/\d+ ms/)
   await expect(inspector).toContainText('Data islands on this page:')
 })
+
+test('the cart in the global data island matches /cart.js', async ({ page }) => {
+  await page.goto(`/products/${products.variants}`)
+  // lines with and without a variant title
+  await page.evaluate(
+    async (handles) => {
+      const ids = await Promise.all(
+        handles.map(
+          async (handle) => (await (await fetch(`/products/${handle}.js`)).json()).variants[0].id,
+        ),
+      )
+      await fetch('/cart/add.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: ids.map((id) => ({ id, quantity: 2 })) }),
+      })
+    },
+    [products.variants, products.single],
+  )
+
+  const html = (await (await page.goto('/'))?.text()) ?? ''
+  const json = /<script[^>]*data-island-props="global"[^>]*>([\s\S]*?)<\/script>/.exec(html)?.[1]
+  const { cart } = JSON.parse(json ?? '{}')
+  const ajax = await page.evaluate(async () => (await fetch('/cart.js')).json())
+
+  // the island holds a subset of the fields, each one as /cart.js has it; images come from the
+  // shop's own CDN path instead of cdn.shopify.com, so they're compared by file
+  const file = (url: unknown) => (typeof url === 'string' ? url.split('/').at(-1) : url)
+  const pick = (from: Record<string, unknown>, like: Record<string, unknown>) =>
+    Object.fromEntries(
+      Object.keys(like).map((key) => [key, key === 'image' ? file(from[key]) : from[key]]),
+    )
+  for (const item of cart.items) item.image = file(item.image)
+  expect(cart.items).toHaveLength(2)
+  expect(cart).toEqual({
+    ...pick(ajax, cart),
+    items: ajax.items.map((item: Record<string, unknown>, i: number) => pick(item, cart.items[i])),
+  })
+  expect(Object.keys(cart.items[0])).toHaveLength(22)
+})
