@@ -140,3 +140,18 @@ test('the cart count follows cart changes made by apps, with fetch or XHR', asyn
   )
   await expect(count).toHaveText('3')
 })
+
+test('hello-island shows the greeting from its section settings', async ({ page }) => {
+  const response = await page.goto('/')
+  // the island replaces its children when it mounts, props included, so read them from the served page
+  const html = (await response?.text()) ?? ''
+  const json = /<div data-island="hello-island"[\s\S]*?data-island-props="[^"]*">([^<]*)</.exec(
+    html,
+  )?.[1]
+  const props = JSON.parse(json ?? '{}')
+  const island = page.locator('[data-island="hello-island"]')
+  await expect(island.getByRole('button')).toBeVisible()
+  await expect(island).toContainText(
+    `${props.greeting || 'Hello'} from ${props.name}, mounted by Vue.`,
+  )
+})

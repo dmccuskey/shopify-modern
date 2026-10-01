@@ -14,6 +14,7 @@ import { build } from 'vite'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { dataIslandSnippet } from '@pelagojs/islands/snippet'
 import pelago, { findIslands, islandName, registryModule, type AdapterImport } from './index.js'
+import { settingsTypes } from './settings.js'
 
 let theme: string
 
@@ -102,6 +103,10 @@ describe('build', () => {
     write('src/adapter.js', 'export const testAdapter = { mount: () => () => {} }')
     write('src/islands/ProductForm.js', 'export default "ProductForm"')
     write('src/theme.js', "import { islands } from 'virtual:islands'\nconsole.log(islands)")
+    write(
+      'sections/hello.liquid',
+      '{% schema %}{ "settings": [{ "type": "text", "id": "heading" }] }{% endschema %}',
+    )
   }
 
   async function buildTheme() {
@@ -134,6 +139,27 @@ describe('build', () => {
     expect(readFileSync(path.join(theme, 'snippets/data-island.liquid'), 'utf8')).toBe(
       dataIslandSnippet,
     )
+
+    expect(readFileSync(path.join(theme, 'src/sections.d.ts'), 'utf8')).toBe(
+      settingsTypes(theme).source,
+    )
+  })
+
+  it('writes no settings types when turned off', async () => {
+    setUpTheme()
+    await build({
+      root: theme,
+      configFile: false,
+      logLevel: 'silent',
+      build: { outDir: 'assets', rollupOptions: { input: path.join(theme, 'src/theme.js') } },
+      plugins: [
+        pelago({
+          adapters: { '.js': { from: '/src/adapter.js', name: 'testAdapter' } },
+          settingsTypes: false,
+        }),
+      ],
+    })
+    expect(existsSync(path.join(theme, 'src/sections.d.ts'))).toBe(false)
   })
 
   it('keeps the files of the current build when built again', async () => {

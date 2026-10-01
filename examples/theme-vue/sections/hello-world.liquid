@@ -9,7 +9,7 @@
 
       <div data-island="hello-island" data-island-id="{{ section.id }}">
         <p>This text is replaced when the Vue island mounts.</p>
-        {%- capture props -%}{ "name": {{ shop.name | json }} }{%- endcapture -%}
+        {%- capture props -%}{ "name": {{ shop.name | json }}, "greeting": {{ section.settings.greeting | json }} }{%- endcapture -%}
         {% render 'data-island', id: section.id, json: props %}
       </div>
 
@@ -139,7 +139,14 @@
 {% schema %}
 {
   "name": "Hello World",
-  "settings": [],
+  "settings": [
+    {
+      "type": "text",
+      "id": "greeting",
+      "label": "t:labels.greeting",
+      "default": "Hello"
+    }
+  ],
   "presets": [
     {
       "name": "Hello World Template",
