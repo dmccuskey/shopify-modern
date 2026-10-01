@@ -37,6 +37,17 @@ This needs a Shopify development store; one can be created for free with a [Shop
 
 `npm run deploy -w examples/theme-vue` builds the assets and runs `shopify theme push`.
 
+### Testing in the Theme Editor
+
+`npm run dev` doesn't work in the theme editor. The editor's preview is served by Shopify, not by the local preview, so it loads the islands from the Vite dev server on `localhost`, and Chrome blocks a store's page from reaching `localhost` (Local Network Access). The islands then show their fallback markup, and the preview frame's console reports that permission was denied for the `loopback` address space. Allowing Chrome's local network prompt doesn't help: it applies to the Shopify admin, not to the preview frame inside it.
+
+Use the built theme instead:
+
+1. Stop `npm run dev`, then run `npm run dev:editor` from the repository root. It runs `vite build --watch` and `shopify theme dev` together: each change is built, and the Shopify CLI uploads the built files to the development theme.
+2. Open the theme editor URL that `shopify theme dev` prints, and reload the editor after each change. Hot reload doesn't reach the editor, and the island inspector isn't there, because builds never include it.
+
+When going back to `npm run dev`, the CLI can miss the dev version of `snippets/vite-tag.liquid`, and the preview keeps loading the built `vite-theme-*.js`. `touch examples/theme-vue/snippets/vite-tag.liquid` makes it upload the snippet again.
+
 ### Smoke Tests
 
 `npm run test:e2e` runs Playwright smoke tests of the example theme's islands against the running preview: adding to the cart, the cart drawer, and a sold-out product. They need a store, so they aren't part of `npm run check` or CI. See [`examples/theme-vue/e2e/README.md`](../examples/theme-vue/e2e/README.md).

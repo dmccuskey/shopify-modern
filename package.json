@@ -17,6 +17,7 @@
   "scripts": {
     "build": "tsc -b && npm run build -w examples/theme-vue",
     "dev": "tsc -b && npm run dev -w examples/theme-vue",
+    "dev:editor": "tsc -b && npm run dev:editor -w examples/theme-vue",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "npm run test:e2e -w examples/theme-vue",
