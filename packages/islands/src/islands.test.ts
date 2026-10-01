@@ -99,7 +99,7 @@ describe('startIslands', () => {
     await settle()
     expect(mounts.map((m) => m.el)).toEqual([island('a')])
     expect(error).toHaveBeenCalledWith(
-      '[shopify-modern] island "broken" failed to mount',
+      '[pelago] island "broken" failed to mount',
       expect.any(Error),
     )
   })
@@ -125,10 +125,7 @@ describe('startIslands', () => {
     await settle()
     expect(mounts).toEqual([])
     expect(island('a').innerHTML).toBe('<p>fallback</p>')
-    expect(error).toHaveBeenCalledWith(
-      '[shopify-modern] island "lazy" failed to mount',
-      expect.any(Error),
-    )
+    expect(error).toHaveBeenCalledWith('[pelago] island "lazy" failed to mount', expect.any(Error))
   })
 
   it('does not mount an island unmounted while its component loads', async () => {
@@ -234,9 +231,7 @@ describe('loading rules', () => {
     start('<div data-island="greeting" data-island-load="lazy"></div>')
     await settle()
     expect(mounts).toHaveLength(1)
-    expect(warn).toHaveBeenCalledWith(
-      '[shopify-modern] unknown data-island-load "lazy", loading eagerly',
-    )
+    expect(warn).toHaveBeenCalledWith('[pelago] unknown data-island-load "lazy", loading eagerly')
   })
 })
 

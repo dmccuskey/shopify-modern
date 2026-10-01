@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef, watch } from 'vue'
-import { CartError, changeCart, formatMoney } from '@shopify-modern/shopify'
-import { useCart, useCartOpen, useLocale } from '@shopify-modern/vue'
+import { CartError, changeCart, formatMoney } from '@pelagojs/shopify'
+import { useCart, useCartOpen, useLocale } from '@pelagojs/vue'
 
 const props = defineProps<{
   cartUrl: string

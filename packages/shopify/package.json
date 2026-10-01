@@ -1,5 +1,5 @@
 {
-  "name": "@shopify-modern/shopify",
+  "name": "@pelagojs/shopify",
   "version": "0.0.0",
   "description": "Shopify helpers for islands: money formatting, Ajax Cart and Section Rendering clients, shared stores",
   "license": "MIT",
@@ -20,7 +20,7 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@shopify-modern/islands": "*",
+    "@pelagojs/islands": "*",
     "nanostores": "^1.5.4"
   }
 }

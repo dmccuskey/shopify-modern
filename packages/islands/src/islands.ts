@@ -70,7 +70,7 @@ export function startIslands(registry: IslandRegistry): Islands {
         unmount = adapter.mount(el, component, props)
       } catch (error) {
         if (islands.get(el) === dispose) islands.delete(el)
-        console.error(`[shopify-modern] island "${name}" failed to mount`, error)
+        console.error(`[pelago] island "${name}" failed to mount`, error)
       }
     }
     cancel = whenReady(el, mount)
@@ -124,7 +124,7 @@ function findIslands(root: ParentNode): HTMLElement[] {
 function whenReady(el: HTMLElement, mount: () => void): () => void {
   const rule = el.dataset.islandLoad || 'eager'
   if (!loadingRules.includes(rule)) {
-    console.warn(`[shopify-modern] unknown data-island-load "${rule}", loading eagerly`)
+    console.warn(`[pelago] unknown data-island-load "${rule}", loading eagerly`)
   }
 
   switch (rule as LoadingRule) {

@@ -140,7 +140,7 @@ export async function addToCart(items: CartAddItem | CartAddItem[]): Promise<Car
     })
     return added.items
   } finally {
-    await refreshCart().catch((error: unknown) => console.error('[shopify-modern]', error))
+    await refreshCart().catch((error: unknown) => console.error('[pelago]', error))
   }
 }
 

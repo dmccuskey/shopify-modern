@@ -1,5 +1,5 @@
 import { atom, onMount } from 'nanostores'
-import { readProps } from '@shopify-modern/islands'
+import { readProps } from '@pelagojs/islands'
 import type { Cart } from './cart.js'
 import { refreshCart } from './cart.js'
 import { watchCartRequests } from './sync.js'
@@ -74,6 +74,5 @@ onMount($cart, () => {
   // keep $cart up to date when apps change the cart
   watchCartRequests()
   // without a cart in the global data island, fetch it
-  if (!$cart.get())
-    refreshCart().catch((error: unknown) => console.error('[shopify-modern]', error))
+  if (!$cart.get()) refreshCart().catch((error: unknown) => console.error('[pelago]', error))
 })

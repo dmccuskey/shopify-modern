@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
-import { $cart, $cartOpen, $customer, $locale } from '@shopify-modern/shopify'
-import type { Cart } from '@shopify-modern/shopify'
+import { $cart, $cartOpen, $customer, $locale } from '@pelagojs/shopify'
+import type { Cart } from '@pelagojs/shopify'
 import { useCart, useCartOpen, useCustomer, useLocale, vueAdapter } from './index.js'
 
 const cart = { token: 'abc', item_count: 2, items: [] } as unknown as Cart

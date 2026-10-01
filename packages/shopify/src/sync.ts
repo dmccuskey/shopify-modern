@@ -7,7 +7,7 @@ import { ownRequests, refreshCart } from './cart.js'
 const cartChange = /\/cart\/(add|change|update|clear)(\.js)?$/
 
 // Marks a patched `fetch` or `XMLHttpRequest`, so a second copy of this package doesn't patch it again.
-const patched = Symbol.for('shopify-modern.cart-sync')
+const patched = Symbol.for('pelago.cart-sync')
 
 function changesCart(url: string | URL): boolean {
   const resolved = new URL(url, location.href)
@@ -15,7 +15,7 @@ function changesCart(url: string | URL): boolean {
 }
 
 function refresh(): void {
-  refreshCart().catch((error: unknown) => console.error('[shopify-modern]', error))
+  refreshCart().catch((error: unknown) => console.error('[pelago]', error))
 }
 
 function watchFetch(): void {
