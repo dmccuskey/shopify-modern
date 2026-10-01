@@ -1,5 +1,5 @@
 {
-  "name": "@shopify-modern/islands",
+  "name": "@pelagojs/islands",
   "version": "0.0.0",
   "description": "The core island runtime for Shopify themes: data island props, loading rules, theme editor lifecycle",
   "license": "MIT",

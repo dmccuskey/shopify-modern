@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { init } from './init.js'
 
-const usage = `Usage: npx @shopify-modern/islands init [theme folder] [--force]
+const usage = `Usage: npx @pelagojs/islands init [theme folder] [--force]
 
 Writes snippets/data-island.liquid into the theme (default: the current folder).
-Themes built with @shopify-modern/vite-plugin don't need this: the plugin writes it.`
+Themes built with @pelagojs/vite-plugin don't need this: the plugin writes it.`
 
 const args = process.argv.slice(2)
 const [command, themeDir = '.'] = args.filter((arg) => !arg.startsWith('-'))

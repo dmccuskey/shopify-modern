@@ -12,13 +12,8 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { build } from 'vite'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { dataIslandSnippet } from '@shopify-modern/islands/snippet'
-import shopifyModern, {
-  findIslands,
-  islandName,
-  registryModule,
-  type AdapterImport,
-} from './index.js'
+import { dataIslandSnippet } from '@pelagojs/islands/snippet'
+import pelago, { findIslands, islandName, registryModule, type AdapterImport } from './index.js'
 
 let theme: string
 
@@ -34,7 +29,7 @@ beforeEach(() => {
 afterEach(() => rmSync(theme, { recursive: true, force: true }))
 
 const adapters: Record<string, AdapterImport> = {
-  '.vue': { from: '@shopify-modern/vue', name: 'vueAdapter' },
+  '.vue': { from: '@pelagojs/vue', name: 'vueAdapter' },
 }
 
 describe('islandName', () => {
@@ -81,7 +76,7 @@ describe('registryModule', () => {
     )
     expect(code).toBe(
       [
-        'const adapter0 = () => import("@shopify-modern/vue").then((m) => m.vueAdapter)',
+        'const adapter0 = () => import("@pelagojs/vue").then((m) => m.vueAdapter)',
         'export const islands = {',
         '  "product-form": { load: () => import("/theme/src/islands/ProductForm.vue"), adapter: adapter0 },',
         '}',
@@ -115,9 +110,7 @@ describe('build', () => {
       configFile: false,
       logLevel: 'silent',
       build: { outDir: 'assets', rollupOptions: { input: path.join(theme, 'src/theme.js') } },
-      plugins: [
-        shopifyModern({ adapters: { '.js': { from: '/src/adapter.js', name: 'testAdapter' } } }),
-      ],
+      plugins: [pelago({ adapters: { '.js': { from: '/src/adapter.js', name: 'testAdapter' } } })],
     })
   }
 

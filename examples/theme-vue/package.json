@@ -1,5 +1,5 @@
 {
-  "name": "@shopify-modern/example-theme-vue",
+  "name": "@pelagojs/example-theme-vue",
   "private": true,
   "description": "Example theme: Shopify's skeleton theme with Vue islands",
   "license": "SEE LICENSE IN LICENSE.md",
@@ -15,14 +15,14 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@shopify-modern/islands": "*",
-    "@shopify-modern/shopify": "*",
-    "@shopify-modern/vue": "*",
+    "@pelagojs/islands": "*",
+    "@pelagojs/shopify": "*",
+    "@pelagojs/vue": "*",
     "vue": "^3.5.43"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "@shopify-modern/vite-plugin": "*",
+    "@pelagojs/vite-plugin": "*",
     "@shopify/cli": "^4.8.2",
     "@vitejs/plugin-vue": "^6.0.9",
     "npm-run-all2": "^9.0.3",

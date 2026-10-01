@@ -1,5 +1,5 @@
 import { createApp, type Component } from 'vue'
-import type { Adapter } from '@shopify-modern/islands'
+import type { Adapter } from '@pelagojs/islands'
 
 export { useStore } from '@nanostores/vue'
 export { useCart, useCartOpen, useCustomer, useLocale } from './stores.js'

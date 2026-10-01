@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
-import { addToCart, CartError, formatMoney } from '@shopify-modern/shopify'
-import { useCartOpen, useLocale } from '@shopify-modern/vue'
+import { addToCart, CartError, formatMoney } from '@pelagojs/shopify'
+import { useCartOpen, useLocale } from '@pelagojs/vue'
 
 interface Variant {
   id: number

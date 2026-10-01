@@ -1,9 +1,9 @@
 import { useStore } from '@nanostores/vue'
-import { $cart, $cartOpen, $customer, $locale } from '@shopify-modern/shopify'
-import type { Cart, Customer, Locale } from '@shopify-modern/shopify'
+import { $cart, $cartOpen, $customer, $locale } from '@pelagojs/shopify'
+import type { Cart, Customer, Locale } from '@pelagojs/shopify'
 import { computed, type DeepReadonly, type Ref, type WritableComputedRef } from 'vue'
 
-// Vue bindings for the shared stores in @shopify-modern/shopify: see "Shared State" in docs/architecture.md.
+// Vue bindings for the shared stores in @pelagojs/shopify: see "Shared State" in docs/architecture.md.
 // Each one subscribes for the life of the component (or effect scope) that calls it.
 
 /** The cart, as the Ajax Cart API returns it; `null` until it's known. Change it with the cart functions. */

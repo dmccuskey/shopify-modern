@@ -1,7 +1,7 @@
 {
-  "name": "@shopify-modern/vue",
+  "name": "@pelagojs/vue",
   "version": "0.0.0",
-  "description": "Vue 3 adapter for shopify-modern islands",
+  "description": "Vue 3 adapter for Pelago islands",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -21,8 +21,8 @@
   "sideEffects": false,
   "dependencies": {
     "@nanostores/vue": "^1.1.0",
-    "@shopify-modern/islands": "*",
-    "@shopify-modern/shopify": "*"
+    "@pelagojs/islands": "*",
+    "@pelagojs/shopify": "*"
   },
   "peerDependencies": {
     "vue": "^3.5.0"

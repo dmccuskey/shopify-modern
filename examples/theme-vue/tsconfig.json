@@ -7,7 +7,7 @@
     "declaration": false,
     "declarationMap": false,
     "noEmit": true,
-    "types": ["vite/client", "@shopify-modern/vite-plugin/client"]
+    "types": ["vite/client", "@pelagojs/vite-plugin/client"]
   },
   "include": ["src", "vite.config.ts"]
 }

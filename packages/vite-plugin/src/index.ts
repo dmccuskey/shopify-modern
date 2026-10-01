@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { normalizePath, type Plugin, type ResolvedConfig, type ViteDevServer } from 'vite'
-import { dataIslandSnippet, dataIslandSnippetFile } from '@shopify-modern/islands/snippet'
+import { dataIslandSnippet, dataIslandSnippetFile } from '@pelagojs/islands/snippet'
 
 /** Where an adapter comes from: `import { [name] } from '[from]'`. */
 export interface AdapterImport {
@@ -9,10 +9,10 @@ export interface AdapterImport {
   name: string
 }
 
-export interface ShopifyModernOptions {
+export interface PelagoOptions {
   /** The folder of island components, relative to Vite's root. Default: `src/islands`. */
   islandsDir?: string
-  /** The adapter for each component file extension. Default: `.vue` files use `@shopify-modern/vue`. */
+  /** The adapter for each component file extension. Default: `.vue` files use `@pelagojs/vue`. */
   adapters?: Record<string, AdapterImport>
   /** The theme's folder, relative to Vite's root. Default: Vite's root. */
   themeRoot?: string
@@ -26,24 +26,24 @@ export interface ShopifyModernOptions {
 }
 
 const defaultAdapters: Record<string, AdapterImport> = {
-  '.vue': { from: '@shopify-modern/vue', name: 'vueAdapter' },
+  '.vue': { from: '@pelagojs/vue', name: 'vueAdapter' },
 }
 
 const virtualId = 'virtual:islands'
 const resolvedVirtualId = '\0' + virtualId
 
 /**
- * The shopify-modern Vite plugin. It generates the island registry (`import { islands } from 'virtual:islands'`)
+ * The Pelago Vite plugin. It generates the island registry (`import { islands } from 'virtual:islands'`)
  * from the island folder, writes the data island snippet into the theme, and deletes old built files from `assets/`.
  */
-export default function shopifyModern(options: ShopifyModernOptions = {}): Plugin {
+export default function pelago(options: PelagoOptions = {}): Plugin {
   const adapters = options.adapters ?? defaultAdapters
   const assetPrefix = options.assetPrefix ?? 'vite-'
   let config: ResolvedConfig
   let islandsDir: string
 
   return {
-    name: 'shopify-modern',
+    name: 'pelago',
 
     config(userConfig) {
       const build = userConfig.build
@@ -132,8 +132,7 @@ export function findIslands(
     if (!entry.isFile() || !(extension in adapters)) continue
     const name = islandName(path.basename(entry.name, extension))
     const other = files.get(name)
-    if (other)
-      throw new Error(`[shopify-modern] ${other} and ${entry.name} are both island "${name}"`)
+    if (other) throw new Error(`[pelago] ${other} and ${entry.name} are both island "${name}"`)
     files.set(name, entry.name)
     islands.push({ name, file: normalizePath(path.join(islandsDir, entry.name)), extension })
   }
@@ -159,7 +158,7 @@ export function registryModule(
   const lines = used.map((extension) => {
     const { from, name } = adapters[extension]!
     if (!/^[A-Za-z_$][\w$]*$/.test(name))
-      throw new Error(`[shopify-modern] adapter name "${name}" is not an identifier`)
+      throw new Error(`[pelago] adapter name "${name}" is not an identifier`)
     return `const ${adapterVars.get(extension)} = () => import(${JSON.stringify(from)}).then((m) => m.${name})`
   })
   lines.push('export const islands = {')
