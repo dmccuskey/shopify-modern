@@ -1,6 +1,6 @@
-# shopify-modern Documentation
+# Pelago Documentation
 
-shopify-modern v2 is being built on the `v2` branch. A Quick Start comes with the first working release; until then, start with the [architecture](architecture.md).
+Pelago is shopify-modern v2, published to npm as `@pelagojs/*` and built on the `v2` branch. A Quick Start comes with the first working release; until then, start with the [architecture](architecture.md).
 
 ## Internals
 
@@ -17,10 +17,10 @@ shopify-modern v2 is being built on the `v2` branch. A Quick Start comes with th
 ```text
 shopify-modern/
 ├── packages/
-│   ├── islands/            # @shopify-modern/islands: the core runtime
-│   ├── shopify/            # @shopify-modern/shopify: Shopify helpers, shared stores
-│   ├── vue/                # @shopify-modern/vue: the Vue 3 adapter
-│   └── vite-plugin/        # @shopify-modern/vite-plugin
+│   ├── islands/            # @pelagojs/islands: the core runtime
+│   ├── shopify/            # @pelagojs/shopify: Shopify helpers, shared stores
+│   ├── vue/                # @pelagojs/vue: the Vue 3 adapter
+│   └── vite-plugin/        # @pelagojs/vite-plugin
 ├── examples/
 │   └── theme-vue/          # example theme on Shopify's skeleton theme
 │       └── shopify.theme.toml  # you create (gitignored): your store

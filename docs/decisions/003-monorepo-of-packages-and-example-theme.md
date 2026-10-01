@@ -1,6 +1,6 @@
 # ADR 003: A Monorepo of npm Packages Plus an Example Theme
 
-**Status:** Accepted
+**Status:** Accepted; amended 2026-09-30 (see [Amendment](#amendment-2026-09-30-the-pelagojs-scope))
 
 ## Context
 
@@ -26,3 +26,7 @@ npm can't place Liquid files into a theme's folders, which could make a package 
 - Changes to a package are tested against a real theme in the same commit.
 - Releases need versioning and publishing for several packages, and the build tooling has to handle a workspace.
 - The example theme shows one framework at a time; examples for the other frameworks (`examples/theme-react` and so on) come with their adapters.
+
+## Amendment 2026-09-30: The @pelagojs Scope
+
+The packages are published as `@pelagojs/*`, not `@shopify-modern/*`: `@pelagojs/islands`, `@pelagojs/shopify`, `@pelagojs/vue` and `@pelagojs/vite-plugin`. The repository and its layout don't change. The reasons are in [ADR 007](007-pelago-name-and-npm-scope.md).

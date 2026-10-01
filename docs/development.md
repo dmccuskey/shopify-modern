@@ -1,6 +1,6 @@
 # Development
 
-How to work on shopify-modern v2: building and testing, branches, the roadmap, and ideas that aren't decided yet.
+How to work on Pelago (shopify-modern v2): building and testing, branches, the roadmap, and ideas that aren't decided yet.
 
 ## Build and Test
 
