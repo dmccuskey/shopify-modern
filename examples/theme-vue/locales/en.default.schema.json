@@ -37,6 +37,7 @@
     "alignment": "Alignment",
     "background": "Background",
     "foreground": "Foreground",
+    "greeting": "Greeting",
     "grid_gap": "Grid spacing",
     "grid_item_width": "Grid item width",
     "input_corner_radius": "Input corner radius",

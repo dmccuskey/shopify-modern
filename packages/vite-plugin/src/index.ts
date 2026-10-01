@@ -1,7 +1,8 @@
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { normalizePath, type Plugin, type ResolvedConfig, type ViteDevServer } from 'vite'
 import { dataIslandSnippet, dataIslandSnippetFile } from '@pelagojs/islands/snippet'
+import { settingsTypes } from './settings.js'
 
 /** Where an adapter comes from: `import { [name] } from '[from]'`. */
 export interface AdapterImport {
@@ -19,6 +20,11 @@ export interface PelagoOptions {
   /** Write `snippets/data-island.liquid` into the theme on every dev run and build. Default: `true`. */
   snippet?: boolean
   /**
+   * Where to write the types of the settings in the `{% schema %}` of the theme's sections and blocks,
+   * relative to Vite's root, or `false` to not write them. Default: `src/sections.d.ts`.
+   */
+  settingsTypes?: string | false
+  /**
    * The prefix of the built files in `assets/`. Old files with this prefix are deleted after each build,
    * so it must not match the theme's own assets. Default: `vite-`.
    */
@@ -34,13 +40,22 @@ const resolvedVirtualId = '\0' + virtualId
 
 /**
  * The Pelago Vite plugin. It generates the island registry (`import { islands } from 'virtual:islands'`)
- * from the island folder, writes the data island snippet into the theme, and deletes old built files from `assets/`.
+ * from the island folder, writes the data island snippet and the types of the section settings into the theme,
+ * and deletes old built files from `assets/`.
  */
 export default function pelago(options: PelagoOptions = {}): Plugin {
   const adapters = options.adapters ?? defaultAdapters
   const assetPrefix = options.assetPrefix ?? 'vite-'
   let config: ResolvedConfig
   let islandsDir: string
+  let themeDir: string
+
+  function writeSettingsTypes() {
+    if (options.settingsTypes === false) return
+    const { source, warnings } = settingsTypes(themeDir)
+    for (const warning of warnings) config.logger.warn(`[pelago] ${warning}`)
+    writeIfChanged(path.resolve(config.root, options.settingsTypes ?? 'src/sections.d.ts'), source)
+  }
 
   return {
     name: 'pelago',
@@ -69,19 +84,13 @@ export default function pelago(options: PelagoOptions = {}): Plugin {
     configResolved(resolved) {
       config = resolved
       islandsDir = path.resolve(config.root, options.islandsDir ?? 'src/islands')
+      themeDir = path.resolve(config.root, options.themeRoot ?? '.')
     },
 
     buildStart() {
+      writeSettingsTypes()
       if (options.snippet === false) return
-      const file = path.resolve(
-        config.root,
-        options.themeRoot ?? '.',
-        'snippets',
-        dataIslandSnippetFile,
-      )
-      // rewriting an unchanged file would make Shopify CLI upload it again
-      if (existsSync(file) && readFileSync(file, 'utf8') === dataIslandSnippet) return
-      writeFileSync(file, dataIslandSnippet)
+      writeIfChanged(path.join(themeDir, 'snippets', dataIslandSnippetFile), dataIslandSnippet)
     },
 
     resolveId(id) {
@@ -101,6 +110,16 @@ export default function pelago(options: PelagoOptions = {}): Plugin {
       }
       server.watcher.on('add', onChange)
       server.watcher.on('unlink', onChange)
+
+      // a changed schema changes the settings types
+      const onThemeChange = (file: string) => {
+        const folder = path.relative(themeDir, path.dirname(file))
+        if ((folder === 'sections' || folder === 'blocks') && path.extname(file) === '.liquid')
+          writeSettingsTypes()
+      }
+      server.watcher.on('add', onThemeChange)
+      server.watcher.on('change', onThemeChange)
+      server.watcher.on('unlink', onThemeChange)
     },
 
     writeBundle(outputOptions, bundle) {
@@ -169,6 +188,13 @@ export function registryModule(
   }
   lines.push('}')
   return lines.join('\n') + '\n'
+}
+
+/** Writes a file unless it already has this content: rewriting an unchanged file would make Shopify CLI upload it again. */
+function writeIfChanged(file: string, content: string) {
+  if (existsSync(file) && readFileSync(file, 'utf8') === content) return
+  mkdirSync(path.dirname(file), { recursive: true })
+  writeFileSync(file, content)
 }
 
 function reloadRegistry(server: ViteDevServer) {

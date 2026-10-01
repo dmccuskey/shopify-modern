@@ -57,7 +57,7 @@ The repository is a monorepo of npm packages plus an example theme that installs
 | `@pelagojs/islands` (core) | `readProps`, island discovery, loading rules (`eager`, `visible`, `idle`, `interaction`), theme editor lifecycle, the adapter interface |
 | `@pelagojs/shopify` | `formatMoney`, a typed Ajax Cart client, a Section Rendering fetch helper, locale lookup, and the shared `$cart`, `$customer` and `$locale` stores |
 | `@pelagojs/vue` | The Vue 3 adapter (mount and unmount) and bindings for the stores |
-| `@pelagojs/vite-plugin` | Builds the island registry from `src/islands/`, and writes the optional `data-island.liquid` snippet into the theme on every dev run and build |
+| `@pelagojs/vite-plugin` | Builds the island registry from `src/islands/`, and writes the optional `data-island.liquid` snippet and the types of the section settings (`src/sections.d.ts`) into the theme on every dev run and build |
 | `@pelagojs/react`, `/svelte`, `/wc` | v2.1: the React, Svelte and web component adapters |
 
 ```text
@@ -66,7 +66,7 @@ shopify-modern/
 │   ├── islands/          # core runtime, no framework imports
 │   ├── shopify/          # Shopify helpers and shared stores
 │   ├── vue/              # Vue 3 adapter
-│   └── vite-plugin/      # island registry and snippet generation
+│   └── vite-plugin/      # island registry, snippet and settings types generation
 ├── examples/
 │   └── theme-vue/        # Shopify's skeleton theme with Vue islands
 └── docs/
@@ -124,7 +124,7 @@ export function readProps<T>(id: string): T | null {
 - Serialize only what the island reads, as explicit shapes built in Liquid, not `| json` of whole objects. Data islands have a size budget per page ([ADR 006](decisions/006-data-island-payload-budgets.md)).
 - Data used by several islands (cart, customer, locale, money format) goes in one `data-island-props="global"` tag in `layout/theme.liquid`.
 - Missing data returns `null` without logging; islands handle it.
-- TypeScript types describe the JSON shapes. In v2.0, the types for `settings` are generated from each section's `{% schema %}`.
+- TypeScript types describe the JSON shapes. The types of the `settings` are generated from each section's `{% schema %}` (see [Settings Types](#settings-types)).
 
 ## Island Runtime
 
@@ -264,7 +264,8 @@ examples/theme-vue/
 ├── src/
 │   ├── entrypoints/
 │   │   └── theme.ts     # entry: starts the island loader
-│   └── islands/         # one component per island
+│   ├── islands/         # one component per island
+│   └── sections.d.ts    # types of the section and block settings (generated, committed)
 ├── vite.config.ts
 └── package.json
 ```
@@ -280,7 +281,41 @@ export default defineConfig({
 })
 ```
 
-The plugin's options change the island folder, the adapter for each file extension, the theme folder, the built files' prefix, and whether it writes the snippet. See `PelagoOptions` in `packages/vite-plugin/src/index.ts`. TypeScript learns the type of `virtual:islands` from `"types": ["@pelagojs/vite-plugin/client"]` in the theme's `tsconfig.json`.
+The plugin's options change the island folder, the adapter for each file extension, the theme folder, the built files' prefix, and whether it writes the snippet and the settings types, and where. See `PelagoOptions` in `packages/vite-plugin/src/index.ts`. TypeScript learns the type of `virtual:islands` from `"types": ["@pelagojs/vite-plugin/client"]` in the theme's `tsconfig.json`.
+
+### Settings Types
+
+The plugin reads the `{% schema %}` of every `sections/*.liquid` and `blocks/*.liquid` and writes their settings as TypeScript types to `src/sections.d.ts`, on every dev run and build, and again in dev when a section or block file changes. Like the snippet, it writes only when the content changed. The file is committed: `npm run check` type-checks before it builds, so a fresh clone needs it.
+
+It exports three types: `SectionSettings` (by section file name), `BlockSettings` (by theme block file name) and `SectionBlockSettings` (by section file name, then the type of a block defined in that section). Each setting gets the type of the value an island receives when the Liquid passes it with `| json`:
+
+| Setting type | TypeScript type |
+|---|---|
+| `checkbox` | `boolean` |
+| `range` | `number` |
+| `number` | `number \| null` |
+| `select`, `radio` | the union of the option values, e.g. `'small' \| 'large'` |
+| `text_alignment` | `'left' \| 'center' \| 'right'` |
+| `text`, `textarea`, `richtext`, `inline_richtext`, `html`, `liquid`, `url` | `string \| null` |
+| resources, colors, fonts and anything else | `unknown`: the island gets the shape its Liquid builds |
+
+`header` and `paragraph` settings have no value and are left out. A file whose schema isn't valid JSON is skipped with a warning; Theme Check reports the error.
+
+Islands get explicit JSON shapes, not whole `section.settings` (see [Data Islands](#data-islands)), so an island picks the settings it receives from the type:
+
+```liquid
+{%- capture props -%}{ "name": {{ shop.name | json }}, "greeting": {{ section.settings.greeting | json }} }{%- endcapture -%}
+```
+
+```vue
+<script setup lang="ts">
+import type { SectionSettings } from '../sections'
+
+defineProps<{ name: string } & Pick<SectionSettings['hello-world'], 'greeting'>>()
+</script>
+```
+
+Renaming or removing the `greeting` setting then fails the type check. The Liquid that builds the JSON is not checked against the types.
 
 | Concern | Choice | Note |
 |---|---|---|
