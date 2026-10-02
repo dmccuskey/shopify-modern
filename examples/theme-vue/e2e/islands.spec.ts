@@ -156,6 +156,25 @@ test('hello-island shows the greeting from its section settings', async ({ page 
   )
 })
 
+test('announcement-countdown counts down to the end, then shows the ended message', async ({
+  page,
+}) => {
+  const html = (await (await page.request.get('/')).text()) ?? ''
+  const json = /<script[^>]*data-island-props="[^"]*__announcement"[^>]*>([^<]*)</.exec(html)?.[1]
+  const props = JSON.parse(json ?? '{}')
+  expect(props.endsAt).toBeGreaterThan(0)
+  // the fallback, before the island mounts
+  expect(html).toMatch(/data-island="announcement-countdown"[^>]*>\s*Ends \w+ \d+ at/)
+
+  // the page's clock stands 1 day, 2 hours, 3 minutes and 4 seconds before the end; timers still run
+  await page.clock.setFixedTime(props.endsAt - (26 * 3600 + 3 * 60 + 4) * 1000)
+  await page.goto('/')
+  const island = page.locator('[data-island="announcement-countdown"]')
+  await expect(island).toHaveText(props.show_seconds ? 'Ends in 1d 2h 3m 4s.' : 'Ends in 1d 2h 3m.')
+  await page.clock.setFixedTime(props.endsAt)
+  await expect(island).toHaveText(props.ended_message)
+})
+
 // The island inspector runs in `npm run dev` only; Playwright's locators reach into its shadow root.
 
 test('the island inspector lists the islands on the page, and opens with Alt+Shift+I', async ({

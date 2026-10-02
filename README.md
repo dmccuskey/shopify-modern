@@ -72,7 +72,7 @@ Shopify themes are written in Liquid, and the usual way to use modern front-end 
 
 ## Quick Start
 
-This runs the example theme, Shopify's skeleton theme with three Vue islands, in about 10 minutes on a Mac. At the end you will have it running on your development store with hot reload, and an island you changed yourself.
+This runs the example theme, Shopify's skeleton theme with four Vue islands, in about 10 minutes on a Mac. At the end you will have it running on your development store with hot reload, and an island you changed yourself.
 
 You need Node 22.12 or newer (`node --version`) and a Shopify development store, which you can create for free with a [Shopify Partner](https://www.shopify.com/partners) account. The Shopify CLI is installed with the example theme.
 
@@ -102,7 +102,7 @@ This builds the packages, then starts Vite and `shopify theme dev` together. The
 
 Open the preview URL. The home page says "Hello from *your store's name*, mounted by Vue." with a button that counts clicks. If it still says "This text is replaced when the Vue island mounts.", the island didn't load: check the browser's console.
 
-The `◆ 2 islands` button in the corner opens the island inspector (or press Alt+Shift+I): the hello island and the cart drawer in the header. Product pages add a third, the product form.
+The `◆ 3 islands` button in the corner opens the island inspector (or press Alt+Shift+I): the countdown in the announcement bar, the hello island, and the cart drawer in the header. Product pages have the cart drawer and the product form.
 
 **Going further:** the islands in the theme editor need `npm run dev:editor` instead ([Testing in the Theme Editor](docs/development.md#testing-in-the-theme-editor)).
 
@@ -189,6 +189,7 @@ Then add islands as above. The plugin writes `snippets/data-island.liquid` and `
 
 ## Documentation
 
+- [Tutorial](docs/tutorial.md): how a Pelago theme works, from the files to the dev loop, with a walk-through of one island
 - [Architecture](docs/architecture.md): how it works: data islands, the island runtime, loading rules, the theme editor, shared state, and the build
 - [Example theme](examples/theme-vue/README.md): what the example contains, and what it changes from Shopify's skeleton theme
 - [Development](docs/development.md): the dev loop, the theme editor, deploying, tests, and the roadmap

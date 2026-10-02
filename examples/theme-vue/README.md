@@ -26,6 +26,7 @@ The theme files come from [Shopify/skeleton-theme](https://github.com/Shopify/sk
 - `sections/header.liquid`: the cart link is the fallback of the `cart-drawer` island (loaded when the browser is idle), which keeps the link and count and adds a drawer, a native `<dialog>`, with the lines, quantity buttons, the subtotal and checkout.
 - `locales/en.default.json` has strings for the islands: `product.*` and more `cart.*`. The islands get them through their props, translated by Liquid.
 - `sections/hello-world.liquid` has a `hello-island` mount element, with its props (the shop's name and the section's `greeting` setting) in a data island inside it, rendered by the `data-island` snippet. The `greeting` setting is new, with its label in `locales/en.default.schema.json`; the island types it from the generated `src/sections.d.ts`.
+- `sections/announcement-countdown.liquid` is new: an announcement bar whose end time is the fallback of the `announcement-countdown` island, which counts down to it (to midnight when the `ends_at` setting is empty). `templates/index.json` adds it above `hello-world`. It's the section built in the [tutorial](../../docs/tutorial.md).
 - `.shopifyignore` leaves out Vite's build manifest.
 
 To update from the skeleton theme, compare its files at a newer commit with these, and copy over the changes by hand.
