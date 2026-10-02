@@ -1,6 +1,6 @@
 # Pelago Documentation
 
-Pelago is shopify-modern v2, published to npm as `@pelagojs/*` and built on the `v2` branch. A Quick Start comes with the first working release; until then, start with the [architecture](architecture.md).
+shopify-modern publishes Pelago (`@pelagojs/*`), an island runtime for Shopify themes. New here? Start with the [Quick Start](../README.md#quick-start).
 
 ## Internals
 
