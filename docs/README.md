@@ -2,6 +2,10 @@
 
 shopify-modern publishes Pelago (`@pelagojs/*`), an island runtime for Shopify themes. New here? Start with the [Quick Start](../README.md#quick-start).
 
+## Use
+
+- [Tutorial](tutorial.md): how a Pelago theme works: the files, which part does what, a walk-through of one island, and the dev loop
+
 ## Internals
 
 - [Architecture](architecture.md): how v2 works: data islands, the island runtime, shared state, and the build
@@ -26,6 +30,7 @@ shopify-modern/
 │       └── shopify.theme.toml  # you create (gitignored): your store
 ├── docs/
 │   ├── README.md           # this page
+│   ├── tutorial.md
 │   ├── architecture.md
 │   ├── development.md
 │   └── decisions/          # ADRs
