@@ -1,108 +1,207 @@
 # shopify-modern
 
-This proof-of-concept shows a method of creating an ecommerce experience for Shopify by using modern front-end development tools and techniques, while still leveraging some of the beneficial features of the Shopify system & infrastructure.
+Modern front-end development for Shopify themes, without leaving the theme behind.
 
+shopify-modern publishes **Pelago** (`@pelagojs/*`), an island runtime for Online Store 2.0 themes. Liquid still renders every page, so the theme editor, app blocks, SEO and Shopify's hosting work as usual. Vite, TypeScript and Vue components take over only the parts of the page that need JavaScript, and each one loads only when it's needed.
 
-## Overview
+A section marks where an island goes and gives it its props as JSON:
 
-Shopify's Wordpress-like structure is as much fun to work with as Wordpress – "let's develop like it's 1999!" :-) These days we know that it can be done better.
+```liquid
+{%- comment -%} sections/hello-world.liquid {%- endcomment -%}
+<div data-island="hello-island" data-island-id="{{ section.id }}">
+  <p>This text is replaced when the Vue island mounts.</p>
+  {%- capture props -%}{ "name": {{ shop.name | json }}, "greeting": {{ section.settings.greeting | json }} }{%- endcapture -%}
+  {% render 'data-island', id: section.id, json: props %}
+</div>
+```
 
-This project shows a working, hybrid Shopify-template which still runs on the Shopify infrastructure. However, because of a very clear separation between Shopify and the front-end, we can develop the web experience using modern tools.
+The island is a Vue component with the same name in `src/islands/`. Its prop types come from the section's `{% schema %}`:
 
-While this project template is NOT full-SPA, it helps by giving a roadmap for those wanting to transform an existing Shopify template into one which is both modern and full-SPA. The project already has features to help with that goal in mind.
+```vue
+<!-- src/islands/HelloIsland.vue -->
+<script setup lang="ts">
+import { ref } from 'vue'
+import type { SectionSettings } from '../sections'
 
+defineProps<{ name: string } & Pick<SectionSettings['hello-world'], 'greeting'>>()
+const clicks = ref(0)
+</script>
 
+<template>
+  <p>
+    {{ greeting || 'Hello' }} from {{ name }}, mounted by Vue.
+    <button type="button" @click="clicks++">Clicked {{ clicks }} times</button>
+  </p>
+</template>
+```
 
-## Benefits
+How a page comes together:
 
-Here are some of the benefits of this framework / concept:
+```mermaid
+flowchart LR
+    liquid["Shopify renders Liquid<br/>(sections, settings, SEO)"]
+    html["HTML + data islands<br/>(JSON per section)"]
+    loader["Island loader<br/>(finds [data-island])"]
+    island["Island mounted<br/>(reads its JSON props)"]
+    editor["Theme editor<br/>(section load / unload)"]
+    ajax["Shopify Ajax APIs<br/>(cart, section rendering)"]
 
-**Framework**
+    liquid --> html --> loader --> island
+    editor -- remount --> loader
+    island -- fetch --> ajax
+```
 
-* Modern development with Vuejs
-* Internationalization (i18n)
-* Special tags & filters (like in Shopify Liquid)
-* Clear separation between Shopify Liquid & Vuejs code & markup
-* Rendered page components determined using Vuejs routes paired with Shopify URLs.
-* Avoid any potential issues with [Shopify 64k page-limit](https://help.shopify.com/manual/using-themes/troubleshooting/fix-64-kilobyte-limit-errors)
-* Search-bot friendly (soon)
+## Why
 
-**Shopify**
+Shopify themes are written in Liquid, and the usual way to use modern front-end tools with Shopify is to go headless, giving up the theme editor, app blocks and Shopify's hosting along with Liquid. Most stores need neither extreme: a theme that merchants can edit, with a few interactive parts (a product form, a cart drawer, a filter) built with real components. Pelago is that middle path. It works in any Online Store 2.0 theme, including Dawn and themes from the Theme Store.
 
-* Hosting / Scalability handled by Shopify
-* SEO friendly
-* Server-Side-Augmentation (ie, lightweight Server Side Rendering)
-* Settings / Config files still useful
+**Arriving from an older link?** The 2017 shopify-modern mounted one Vue app over the whole page, with a client-side router. That model breaks the theme editor and app blocks, so it was replaced ([ADR 001](docs/decisions/001-islands-in-a-liquid-first-theme.md)). The 2017 code is kept at the tag [`v1`](https://github.com/dmccuskey/shopify-modern/tree/v1) and the branch [`legacy/v1`](https://github.com/dmccuskey/shopify-modern/tree/legacy/v1).
 
-**Future**
+## Features
 
-* Clear path to full-SPA
-* Ability to do *local* development !
+- **Server-rendered first:** every page is complete HTML before JavaScript runs, and each island holds fallback markup that works without it.
+- **JavaScript per island, on demand:** a few KB of entry script, then each component (and Vue itself) loads only on pages that have it.
+- **Loading rules:** either mount an island at once, when it scrolls into view, when the browser is idle, or on the first interaction.
+- **Data islands:** each island reads its props from JSON rendered by its own section, keyed by the section's ID, so repeated sections never collide.
+- **Theme editor support:** when a merchant edits a section, its islands remount with the new settings.
+- **Typed props from section schemas:** TypeScript types for every section's settings, so renaming a setting fails the type check instead of breaking the store.
+- **Shared cart, customer and locale stores** across islands, with a typed Ajax Cart client and `formatMoney` in the shop's own money format.
+- **Cart sync with apps:** when an app changes the cart, the cart drawer and count update too.
+- **Island inspector:** in development, a panel shows each island's loading rule, mount time, props size and bundle size.
+- **Drops into an existing theme:** npm packages and one Vite plugin, with no Liquid files to copy. Vue first, with a framework-agnostic core.
 
+## Quick Start
 
-## How it works
+This runs the example theme, Shopify's skeleton theme with three Vue islands, in about 10 minutes on a Mac. At the end you will have it running on your development store with hot reload, and an island you changed yourself.
 
-One of the main benefits is that the framework can serialize many of the [Shopify data-objects](https://help.shopify.com/themes/liquid/objects). This serialized data can either be embedded in the primary HTML page or loaded later using HTTP requests. The corresponding front-end Vuejs objects can initialize themselves with either method.
+You need Node 22.12 or newer (`node --version`) and a Shopify development store, which you can create for free with a [Shopify Partner](https://www.shopify.com/partners) account. The Shopify CLI is installed with the example theme.
 
-Though this doesn't qualify as full server-side rendering, having embedded data speeds up the initial page draw since the information will not need to be loaded by subsequent AJAX requests.
+### 1. Get the code
 
-In the future, there will be more control over which data is embedded and which is lazy-loaded after the first page render.
+```bash
+git clone https://github.com/dmccuskey/shopify-modern.git
+cd shopify-modern
+npm install
+```
 
-### Steps to Template-Freedom
+### 2. Set your store
 
-If you want to start integrating the ideas into an existing project, your main goal is to move almost all of the site information out of the Liquid templates. Two important steps for that would be:
+```bash
+cp examples/theme-vue/shopify.theme.example.toml examples/theme-vue/shopify.theme.toml
+```
 
-1. insert app anchors into HTML
+Edit `examples/theme-vue/shopify.theme.toml` and set `store` to your development store, for example `your-dev-store.myshopify.com`. The file is gitignored.
 
-	Depending on how far along you are with the transition, you can use one or many anchors which will be under control of your framework (eg, Vuejs).
+### 3. Start the dev server
 
-	```
-		<!-- a single anchor for the entire app (like in this project) -->
-		<div id="vueapp"></div>
-	```
+```bash
+npm run dev
+```
 
-	```
-		<!-- one of many anchors for individual components -->
-		<div id="calendar-widget"></div>
-		<div id="product-picker-widget"></div>
-	```
+This builds the packages, then starts Vite and `shopify theme dev` together. The first time, the Shopify CLI asks you to log in in the browser, and, if the store is password protected, for the storefront password. It then uploads a development theme, which customers don't see, and prints the preview URL, usually `http://127.0.0.1:9292`.
 
-1. integrate a normal build process
+Open the preview URL. The home page says "Hello from *your store's name*, mounted by Vue." with a button that counts clicks. If it still says "This text is replaced when the Vue island mounts.", the island didn't load: check the browser's console.
 
-	use Webpack or Gulp to generate a typical build file, eg `dist/build.js`.
+The `◆ 2 islands` button in the corner opens the island inspector (or press Alt+Shift+I): the hello island and the cart drawer in the header. Product pages add a third, the product form.
 
-	*Do NOT include any of your front-end code in the Fluid templates*. All of it should be inside of `build.js`, and that file being sourced from `theme.liquid`.
+**Going further:** the islands in the theme editor need `npm run dev:editor` instead ([Testing in the Theme Editor](docs/development.md#testing-in-the-theme-editor)).
 
+### 4. Change an island
 
-## Setup
+Open `examples/theme-vue/src/islands/HelloIsland.vue` and change the text in its `<template>`, for example `mounted by Vue` to `mounted by Vue, edited by me`. Save, and the page updates without a reload.
 
-(rough notes!)
+To update later, run `git pull` and `npm install` in the `shopify-modern` folder.
 
-1. Install [Shopify Themekit](https://shopify.github.io/themekit/)
-1. Rename `config-sample.yml` to `config.yml`. Add your password, theme id, store name.
-1. Run `webpack` to re-pack code upon changes
-1. Run `themekit` to upload webpack output to Shopify
+## Add an Island
 
+This adds a free shipping note that updates with the cart, to the home page of the example theme.
 
-## Libraries
+**1. Write the component.** Every component directly in `src/islands/` is an island, named after its file: `FreeShipping.vue` is `free-shipping`. Create `examples/theme-vue/src/islands/FreeShipping.vue`:
 
-This project uses these libraries:
+```vue
+<script setup lang="ts">
+import { computed } from 'vue'
+import { formatMoney } from '@pelagojs/shopify'
+import { useCart } from '@pelagojs/vue'
 
-* https://shopify.github.io/themekit/
+const props = defineProps<{ threshold: number }>() // in cents, as Shopify counts money
+const cart = useCart()
+const left = computed(() => props.threshold - (cart.value?.total_price ?? 0))
+</script>
 
-	We use **themekit** to upload files, as opposed to [Slate](https://github.com/Shopify/slate), since **Slate** is geared towards traditional Shopify theme development. ([Quickshot](https://quickshot.readme.io) seems like a good choice, too.)
+<template>
+  <p v-if="left > 0">Spend {{ formatMoney(left) }} more for free shipping.</p>
+  <p v-else>Your order ships free.</p>
+</template>
+```
 
+`useCart()` reads the shared cart store, so the note changes as soon as the product form or an app changes the cart.
 
-## Inspiration
+**2. Mount it from a section.** In `examples/theme-vue/sections/hello-world.liquid`, add this after the `hello-island` element:
 
-Inspiration for this project came from the following:
+```liquid
+{%- assign shipping_id = section.id | append: '-shipping' -%}
+<div data-island="free-shipping" data-island-id="{{ shipping_id }}" data-island-load="visible">
+  <p>Free shipping on orders over {{ 5000 | money }}.</p>
+  {% render 'data-island', id: shipping_id, json: '{ "threshold": 5000 }' %}
+</div>
+```
 
-* https://www.shopify.com/partners/blog/28500611-using-javascript-to-super-power-your-clients-shopify-site
-* https://github.com/tshamz/shopify-frankenstein
+The section already has an island, so this one's ID adds `-shipping` to the section's ID. The paragraph is the fallback, shown until the island mounts and if JavaScript fails. `data-island-load="visible"` waits until the island scrolls into view.
 
+**3. Check it.** The page reloads with "Spend $50.00 more for free shipping." (in your store's currency), and the inspector lists `free-shipping` with its loading rule and mount time. Add a product to the cart, and the note changes without a reload.
 
-## References
+**Going further:** [loading rules](docs/architecture.md#loading-rules), [typed settings](docs/architecture.md#settings-types) and the [shared stores](docs/architecture.md#dynamic-data-and-shared-state).
 
-* https://stackoverflow.com/questions/43505094/using-vue-js-in-shopify-liquid-templates
+## Use It in Your Own Theme
 
-	As a side benefit of using this structure, any issues with delimiter conflicts are avoided.
+Pelago works in any Online Store 2.0 theme built with Vite and [`vite-plugin-shopify`](https://github.com/barrel/shopify-vite). Install the packages:
+
+```bash
+npm install @pelagojs/islands @pelagojs/shopify @pelagojs/vue vue
+npm install --save-dev @pelagojs/vite-plugin vite vite-plugin-shopify @vitejs/plugin-vue
+```
+
+Add the plugin to `vite.config.ts`:
+
+```ts
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import shopify from 'vite-plugin-shopify'
+import pelago from '@pelagojs/vite-plugin'
+
+export default defineConfig({
+  plugins: [shopify({ sourceCodeDir: 'src' }), vue(), pelago()],
+})
+```
+
+Start the islands from your entry script, loaded in `layout/theme.liquid` with `{% render 'vite-tag' with 'theme.ts' %}`:
+
+```ts
+// src/entrypoints/theme.ts
+import { startIslands } from '@pelagojs/islands'
+import { islands } from 'virtual:islands'
+
+startIslands(islands)
+```
+
+Then add islands as above. The plugin writes `snippets/data-island.liquid` and `src/sections.d.ts` on every dev run and build. Add `"@pelagojs/vite-plugin/client"` to `types` in `tsconfig.json` so TypeScript knows `virtual:islands`. The shared stores read the shop's locale, customer and cart from a global data island in `layout/theme.liquid`; the example theme's [layout](examples/theme-vue/layout/theme.liquid) shows it.
+
+## Documentation
+
+- [Architecture](docs/architecture.md): how it works: data islands, the island runtime, loading rules, the theme editor, shared state, and the build
+- [Example theme](examples/theme-vue/README.md): what the example contains, and what it changes from Shopify's skeleton theme
+- [Development](docs/development.md): the dev loop, the theme editor, deploying, tests, and the roadmap
+- [Architecture decisions](docs/decisions/): why it is built this way
+
+Everything else is listed on the [documentation home](docs/README.md).
+
+## How It Compares
+
+- **[Hydrogen](https://hydrogen.shopify.dev/)** is Shopify's framework for headless storefronts in React, hosted on Oxygen. It suits stores that want a fully custom front end and can give up the theme editor and Liquid. Pelago keeps the theme and adds components to it.
+- **Web components or plain JavaScript**, as in Dawn, need no build step and suit small interactive parts. Pelago suits themes that want components in a framework, TypeScript, and state shared between them.
+- **[vite-plugin-shopify](https://github.com/barrel/shopify-vite)** builds a theme's JavaScript with Vite, and leaves how it runs on the page to you. Pelago builds on it and adds the runtime: data islands, loading rules, the theme editor lifecycle and shared stores.
+
+## License
+
+shopify-modern and Pelago are released under the [MIT License](LICENSE). The example theme's files come from Shopify's skeleton theme and are under [Shopify's license](examples/theme-vue/LICENSE.md).

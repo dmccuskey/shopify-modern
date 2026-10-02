@@ -1,6 +1,6 @@
 # Architecture
 
-How Pelago (shopify-modern v2) works: Liquid renders the page, and small components ("islands") are mounted into it, fed by JSON data islands and built with Vite.
+How Pelago, the island runtime that shopify-modern publishes, works: Liquid renders the page, and small components ("islands") are mounted into it, fed by JSON data islands and built with Vite.
 
 > **Status:** this is the design for v2.0, written before the code. Sections are updated as each part is built. v2 is developed on the `v2` branch; the 2017 code is on [`legacy/v1`](https://github.com/dmccuskey/shopify-modern/tree/legacy/v1) and the tag [`v1`](https://github.com/dmccuskey/shopify-modern/tree/v1).
 
