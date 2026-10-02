@@ -1,0 +1,69 @@
+{%- liquid
+  if section.settings.ends_at != blank
+    assign ends_at = section.settings.ends_at
+  else
+    assign ends_at = 'now' | date: '%Y-%m-%d 23:59:59'
+  endif
+  assign ends_at_seconds = ends_at | date: '%s'
+-%}
+
+<div class="announcement">
+  <p>
+    {{ section.settings.message }}
+    <span data-island="announcement-countdown" data-island-id="{{ section.id }}" data-island-load="idle">
+      Ends {{ ends_at | date: '%B %-d at %-I:%M %p' }}.
+    </span>
+  </p>
+</div>
+
+{%- capture props -%}
+  { "endsAt": {{ ends_at_seconds | times: 1000 }}, "ended_message": {{ section.settings.ended_message | json }}, "show_seconds": {{ section.settings.show_seconds | json }} }
+{%- endcapture -%}
+{% render 'data-island', id: section.id, json: props %}
+
+{% stylesheet %}
+  .announcement {
+    padding: 0.75rem 24px;
+    background-color: #1a1a1a;
+    color: #fff;
+    text-align: center;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Announcement countdown",
+  "settings": [
+    {
+      "type": "text",
+      "id": "message",
+      "label": "Message",
+      "default": "Free shipping on every order today."
+    },
+    {
+      "type": "text",
+      "id": "ends_at",
+      "label": "Ends at",
+      "info": "As YYYY-MM-DD HH:MM, in the store's time zone. Leave empty to count down to midnight."
+    },
+    {
+      "type": "text",
+      "id": "ended_message",
+      "label": "Message once it has ended",
+      "default": "This offer has ended."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_seconds",
+      "label": "Show seconds",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "Announcement countdown",
+      "category": "Demo"
+    }
+  ]
+}
+{% endschema %}

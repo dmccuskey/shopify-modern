@@ -9,12 +9,17 @@
  */
 {
   "sections": {
+    "announcement": {
+      "type": "announcement-countdown",
+      "settings": {}
+    },
     "main": {
       "type": "hello-world",
       "settings": {}
     }
   },
   "order": [
+    "announcement",
     "main"
   ]
 }

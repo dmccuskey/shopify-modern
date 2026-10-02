@@ -4,6 +4,12 @@
 /** The settings of each section, by file name. */
 export interface SectionSettings {
   '404': {}
+  'announcement-countdown': {
+    message: string | null
+    ends_at: string | null
+    ended_message: string | null
+    show_seconds: boolean
+  }
   article: {}
   blog: {}
   cart: {}
