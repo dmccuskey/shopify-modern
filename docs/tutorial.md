@@ -18,9 +18,11 @@ examples/theme-vue/
 │   ├── entrypoints/theme.ts # you: the entry script, starts the islands
 │   ├── islands/             # you: one component per island, named for it
 │   │   └── AnnouncementCountdown.vue
-│   └── sections.d.ts        # generated: types of the section settings (committed)
+│   ├── sections.d.ts        # generated: types of the section settings (committed)
+│   └── translations.d.ts    # generated: types of the translation keys (committed)
 ├── snippets/
 │   ├── data-island.liquid   # generated: the JSON script tag (gitignored)
+│   ├── pelago-translations.liquid # generated: the strings the islands use (gitignored)
 │   └── vite-tag.liquid      # generated: the <script> tags for the entry (gitignored)
 ├── assets/vite-*            # generated: the built JavaScript and CSS (gitignored)
 └── vite.config.ts           # you, once: the three Vite plugins
@@ -39,14 +41,15 @@ The files you write:
   startIslands(islands)
   ```
 
-- **`layout/theme.liquid`** loads that script with `{% render 'vite-tag' with 'theme.ts' %}`, and renders the **global data island**: the locale, customer and cart, which the shared stores read.
+- **`layout/theme.liquid`** loads that script with `{% render 'vite-tag' with 'theme.ts' %}`, and renders the **global data island**: the locale, customer, cart and translations, which the shared stores and `t()` read.
 
 The generated files, which you never edit:
 
 - **`virtual:islands`** isn't a file on disk. The Vite plugin builds it from `src/islands/`: a map from each island name to a function that imports its component, and one that imports its adapter.
 - **`snippets/data-island.liquid`** renders the data island's script tag. The plugin writes it on every dev run and build.
+- **`snippets/pelago-translations.liquid`** renders the strings of `locales/*.json` that the islands' `t('…')` calls use, in the request's locale, for the global data island. The plugin writes it on every dev run and build, and when a file under `src/` changes.
 - **`snippets/vite-tag.liquid`** is written by `vite-plugin-shopify`. In `npm run dev` it points at the Vite dev server, after a build at the hashed files in `assets/`.
-- **`src/sections.d.ts`** holds TypeScript types for every section's settings, read from each `{% schema %}`. It's committed, because `npm run check` type-checks before it builds.
+- **`src/sections.d.ts`** holds TypeScript types for every section's settings, read from each `{% schema %}`. It's committed, because `npm run check` type-checks before it builds. **`src/translations.d.ts`** does the same for the keys of `locales/*.default.json`, so `t('cart.titel')` fails the type check.
 
 ## Which Part Does What
 
