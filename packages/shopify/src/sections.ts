@@ -1,5 +1,8 @@
-// Shopify renders at most 5 sections per request
-const maxSections = 5
+/** Sections' HTML by section ID; a section that doesn't exist on the page is `null`. */
+export type SectionsHtml = Record<string, string | null>
+
+/** Shopify renders at most five sections per request, here and with a cart change. */
+export const maxSections = 5
 
 /**
  * Renders sections with the Section Rendering API (`?sections=`), in the context of a page
@@ -9,13 +12,13 @@ const maxSections = 5
 export async function renderSections(
   ids: string[],
   url: string = location.pathname + location.search,
-): Promise<Record<string, string | null>> {
+): Promise<SectionsHtml> {
   const batches: string[][] = []
   for (let i = 0; i < ids.length; i += maxSections) batches.push(ids.slice(i, i + maxSections))
   const results = await Promise.all(
     batches.map((batch) => fetchSections(url, { sections: batch.join(',') }).then(json)),
   )
-  return Object.assign({}, ...results) as Record<string, string | null>
+  return Object.assign({}, ...results) as SectionsHtml
 }
 
 /**
@@ -37,6 +40,6 @@ async function fetchSections(url: string, params: Record<string, string>): Promi
   return response
 }
 
-function json(response: Response): Promise<Record<string, string | null>> {
-  return response.json() as Promise<Record<string, string | null>>
+function json(response: Response): Promise<SectionsHtml> {
+  return response.json() as Promise<SectionsHtml>
 }
