@@ -29,18 +29,7 @@
       {%- capture props -%}
         {
           "cartUrl": {{ routes.cart_url | json }},
-          "icon": {{ 'icon-cart.svg' | inline_asset_content | json }},
-          "strings": {
-            "title": {{ 'cart.title' | t | json }},
-            "empty": {{ 'cart.empty' | t | json }},
-            "close": {{ 'cart.close' | t | json }},
-            "remove": {{ 'cart.remove' | t | json }},
-            "decrease": {{ 'cart.decrease' | t | json }},
-            "increase": {{ 'cart.increase' | t | json }},
-            "subtotal": {{ 'cart.subtotal' | t | json }},
-            "checkout": {{ 'cart.checkout' | t | json }},
-            "error": {{ 'cart.error' | t | json }}
-          }
+          "icon": {{ 'icon-cart.svg' | inline_asset_content | json }}
         }
       {%- endcapture -%}
       {% render 'data-island', id: section.id, json: props %}

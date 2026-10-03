@@ -3,6 +3,7 @@ assets/vite-*
 assets/.vite/
 snippets/vite-tag.liquid
 snippets/data-island.liquid
+snippets/pelago-translations.liquid
 
 # Shopify CLI: local state, and the store settings (copy shopify.theme.example.toml)
 .shopify/

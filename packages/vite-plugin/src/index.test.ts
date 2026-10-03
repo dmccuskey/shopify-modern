@@ -155,9 +155,15 @@ describe('build', () => {
     expect(readFileSync(path.join(theme, 'src/sections.d.ts'), 'utf8')).toBe(
       settingsTypes(theme).source,
     )
+
+    // no t() calls and no locales: an empty object, so the layout's render still works
+    expect(readFileSync(path.join(theme, 'snippets/pelago-translations.liquid'), 'utf8')).toMatch(
+      /\n\{\}\n$/,
+    )
+    expect(existsSync(path.join(theme, 'src/translations.d.ts'))).toBe(true)
   })
 
-  it('writes no settings types when turned off', async () => {
+  it('writes no settings types or translations when turned off', async () => {
     setUpTheme()
     await build({
       root: theme,
@@ -168,10 +174,13 @@ describe('build', () => {
         pelago({
           adapters: { '.js': { from: '/src/adapter.js', name: 'testAdapter' } },
           settingsTypes: false,
+          translations: false,
         }),
       ],
     })
     expect(existsSync(path.join(theme, 'src/sections.d.ts'))).toBe(false)
+    expect(existsSync(path.join(theme, 'snippets/pelago-translations.liquid'))).toBe(false)
+    expect(existsSync(path.join(theme, 'src/translations.d.ts'))).toBe(false)
   })
 
   it('records the size of each island, without the code it shares', async () => {

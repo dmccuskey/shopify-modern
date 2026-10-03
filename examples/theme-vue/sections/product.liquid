@@ -63,14 +63,7 @@
           {%- endfor -%}
         ]
       },
-      "selectedVariantId": {{ product.selected_or_first_available_variant.id }},
-      "strings": {
-        "addToCart": {{ 'product.add_to_cart' | t | json }},
-        "soldOut": {{ 'product.sold_out' | t | json }},
-        "unavailable": {{ 'product.unavailable' | t | json }},
-        "quantity": {{ 'product.quantity' | t | json }},
-        "error": {{ 'cart.error' | t | json }}
-      }
+      "selectedVariantId": {{ product.selected_or_first_available_variant.id }}
     }
   {%- endcapture -%}
   {% render 'data-island', id: section.id, json: props %}

@@ -1,23 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef, watch } from 'vue'
-import { CartError, changeCart, formatMoney } from '@pelagojs/shopify'
+import { CartError, changeCart, formatMoney, t } from '@pelagojs/shopify'
 import { useCart, useCartOpen, useLocale } from '@pelagojs/vue'
 
-const props = defineProps<{
+defineProps<{
   cartUrl: string
   /** the theme's cart icon, inline SVG from `icon-cart.svg` */
   icon: string
-  strings: {
-    title: string
-    empty: string
-    close: string
-    remove: string
-    decrease: string
-    increase: string
-    subtotal: string
-    checkout: string
-    error: string
-  }
 }>()
 
 const cart = useCart()
@@ -61,7 +50,7 @@ async function setQuantity(key: string, quantity: number): Promise<void> {
     await changeCart({ id: key, quantity })
   } catch (e) {
     console.error('[cart-drawer]', e)
-    error.value = (e instanceof CartError && e.description) || props.strings.error
+    error.value = (e instanceof CartError && e.description) || t('cart.error')
   } finally {
     busy.value = null
   }
@@ -69,7 +58,7 @@ async function setQuantity(key: string, quantity: number): Promise<void> {
 </script>
 
 <template>
-  <a :href="cartUrl" :aria-label="strings.title" @click.prevent="open = true">
+  <a :href="cartUrl" :aria-label="t('cart.title')" @click.prevent="open = true">
     <sup v-if="count > 0">{{ count }}</sup>
     <!-- eslint-disable-next-line vue/no-v-html -- the theme's own SVG asset, not user content -->
     <span class="cart-drawer__icon" v-html="icon" />
@@ -78,17 +67,20 @@ async function setQuantity(key: string, quantity: number): Promise<void> {
   <dialog
     ref="dialog"
     class="cart-drawer"
-    :aria-label="strings.title"
+    :aria-label="t('cart.title')"
     @cancel="open = false"
     @close="onClose"
     @click="onClick"
   >
     <div class="cart-drawer__header">
-      <h2>{{ strings.title }}</h2>
-      <button type="button" @click="open = false">{{ strings.close }}</button>
+      <h2>
+        {{ t('cart.title') }}
+        <small v-if="count > 0">{{ t('cart.item_count', { count }) }}</small>
+      </h2>
+      <button type="button" @click="open = false">{{ t('cart.close') }}</button>
     </div>
 
-    <p v-if="!cart?.items.length">{{ strings.empty }}</p>
+    <p v-if="!cart?.items.length">{{ t('cart.empty') }}</p>
 
     <ul v-else class="cart-drawer__items">
       <li v-for="item in cart.items" :key="item.key" :aria-busy="busy === item.key">
@@ -101,7 +93,7 @@ async function setQuantity(key: string, quantity: number): Promise<void> {
             <button
               type="button"
               :disabled="!!busy"
-              :aria-label="strings.decrease"
+              :aria-label="t('cart.decrease')"
               @click="setQuantity(item.key, item.quantity - 1)"
             >
               −
@@ -110,13 +102,13 @@ async function setQuantity(key: string, quantity: number): Promise<void> {
             <button
               type="button"
               :disabled="!!busy"
-              :aria-label="strings.increase"
+              :aria-label="t('cart.increase')"
               @click="setQuantity(item.key, item.quantity + 1)"
             >
               +
             </button>
             <button type="button" :disabled="!!busy" @click="setQuantity(item.key, 0)">
-              {{ strings.remove }}
+              {{ t('cart.remove') }}
             </button>
           </div>
         </div>
@@ -127,9 +119,9 @@ async function setQuantity(key: string, quantity: number): Promise<void> {
 
     <form v-if="cart?.items.length" class="cart-drawer__footer" :action="cartUrl" method="post">
       <p>
-        {{ strings.subtotal }}: <strong>{{ money(cart.total_price) }}</strong>
+        {{ t('cart.subtotal') }}: <strong>{{ money(cart.total_price) }}</strong>
       </p>
-      <button type="submit" name="checkout">{{ strings.checkout }}</button>
+      <button type="submit" name="checkout">{{ t('cart.checkout') }}</button>
     </form>
   </dialog>
 </template>
