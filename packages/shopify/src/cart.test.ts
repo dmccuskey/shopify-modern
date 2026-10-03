@@ -104,3 +104,57 @@ describe('cart client', () => {
     expect(stores.$cart.get()).toEqual(fullCart)
   })
 })
+
+describe('the sections option', () => {
+  const sections = { header: '<header>', missing: null }
+
+  it('renders sections with a change, keeping them out of $cart', async () => {
+    fetch.mockResolvedValueOnce(Response.json({ ...fullCart, sections }))
+    await expect(
+      cart.changeCart(
+        { line: 1, quantity: 2 },
+        { sections: ['header', 'missing'], sectionsUrl: '/cart' },
+      ),
+    ).resolves.toEqual({ ...fullCart, sections })
+    expect(body(0)).toEqual({
+      line: 1,
+      quantity: 2,
+      sections: ['header', 'missing'],
+      sections_url: '/cart',
+    })
+    expect(stores.$cart.get()).toEqual(fullCart)
+  })
+
+  it('renders sections with an add, returning them with the lines', async () => {
+    fetch
+      .mockResolvedValueOnce(Response.json({ items: fullCart.items, sections }))
+      .mockResolvedValueOnce(Response.json(fullCart))
+    await expect(cart.addToCart({ id: 1 }, { sections: ['header', 'missing'] })).resolves.toEqual({
+      items: fullCart.items,
+      sections,
+    })
+    expect(body(0)).toEqual({ items: [{ id: 1 }], sections: ['header', 'missing'] })
+    expect(stores.$cart.get()).toEqual(fullCart)
+  })
+
+  it('renders sections beyond five after the change', async () => {
+    // Shopify drops them all when asked for more than five
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
+    const html = (some: string[]) => Object.fromEntries(some.map((id) => [id, `<${id}>`]))
+    fetch
+      .mockResolvedValueOnce(Response.json({ ...fullCart, sections: html(ids.slice(0, 5)) }))
+      .mockResolvedValueOnce(Response.json(html(ids.slice(5))))
+    const result = await cart.updateCart({ note: 'gift' }, { sections: ids, sectionsUrl: '/cart' })
+    expect(result.sections).toEqual(html(ids))
+    expect(body(0)).toEqual({ note: 'gift', sections: ids.slice(0, 5), sections_url: '/cart' })
+    const rest = new URL(String(fetch.mock.calls[1]![0]))
+    expect(rest.pathname).toBe('/cart')
+    expect(rest.searchParams.get('sections')).toBe('f,g')
+  })
+
+  it('sends no sections when none are asked for', async () => {
+    fetch.mockResolvedValueOnce(Response.json(emptyCart))
+    await expect(cart.clearCart({ sections: [] })).resolves.toEqual({ ...emptyCart, sections: {} })
+    expect(body(0)).toEqual({})
+  })
+})
