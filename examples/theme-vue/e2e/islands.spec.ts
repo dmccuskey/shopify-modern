@@ -63,8 +63,11 @@ test('cart-drawer changes the quantity and removes the line', async ({ page }) =
 
   const drawer = page.getByRole('dialog', { name: 'Cart' })
   const count = page.locator('[data-island="cart-drawer"] > a sup')
+  await expect(drawer.getByRole('heading')).toHaveText('Cart 1 item')
   await drawer.getByRole('button', { name: 'Increase quantity' }).click()
   await expect(count).toHaveText('2')
+  // the plural form for the count, from t()
+  await expect(drawer.getByRole('heading')).toHaveText('Cart 2 items')
 
   await page.keyboard.press('Escape')
   await expect(drawer).toBeHidden()
@@ -189,6 +192,24 @@ test('the island inspector lists the islands on the page, and opens with Alt+Shi
   await expect(row).toContainText('eager')
   await expect(row).toContainText(/\d+ ms/)
   await expect(inspector).toContainText('Data islands on this page:')
+})
+
+test('the global data island has the strings the islands use', async ({ page }) => {
+  await page.goto('/')
+  const global = JSON.parse(
+    await page
+      .locator('script[data-island-props="global"]')
+      .textContent()
+      .then((text) => text!),
+  ) as { translations: Record<string, string> }
+  expect(global.translations).toMatchObject({
+    'cart.title': 'Cart',
+    'cart.item_count.one': '{{ count }} item',
+    'cart.item_count.other': '{{ count }} items',
+    'product.add_to_cart': 'Add to cart',
+  })
+  // only the keys the islands' t() calls use, not the whole locale file
+  expect(Object.keys(global.translations)).not.toContain('404.title')
 })
 
 test('the cart in the global data island matches /cart.js', async ({ page }) => {

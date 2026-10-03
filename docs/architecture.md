@@ -55,9 +55,9 @@ The repository is a monorepo of npm packages plus an example theme that installs
 | Package | Provides |
 |---|---|
 | `@pelagojs/islands` (core) | `readProps`, island discovery, loading rules (`eager`, `visible`, `idle`, `interaction`), theme editor lifecycle, the adapter interface, and the island inspector (`@pelagojs/islands/inspector`, development only) |
-| `@pelagojs/shopify` | `formatMoney`, a typed Ajax Cart client, a Section Rendering fetch helper, locale lookup, and the shared `$cart`, `$customer` and `$locale` stores |
+| `@pelagojs/shopify` | `formatMoney`, a typed Ajax Cart client, a Section Rendering fetch helper, the translation lookup `t()`, and the shared `$cart`, `$customer`, `$locale` and `$translations` stores |
 | `@pelagojs/vue` | The Vue 3 adapter (mount and unmount) and bindings for the stores |
-| `@pelagojs/vite-plugin` | Builds the island registry from `src/islands/`, and writes the optional `data-island.liquid` snippet and the types of the section settings (`src/sections.d.ts`) into the theme on every dev run and build; starts the island inspector in dev and records each island's size at build |
+| `@pelagojs/vite-plugin` | Builds the island registry from `src/islands/`, and writes the optional `data-island.liquid` snippet, the translations snippet, and the types of the section settings and translation keys into the theme on every dev run and build; starts the island inspector in dev and records each island's size at build |
 | `@pelagojs/react`, `/svelte`, `/wc` | v2.1: the React, Svelte and web component adapters |
 
 ```text
@@ -250,7 +250,7 @@ The stores are seeded from the global data island the first time an island uses 
 
 The `cart-json` snippet builds the cart with the fields of the `Cart` type, named and shaped as `/cart.js` has them, apart from the `token` and the image URLs, which are on the shop's own CDN path. `cart | json` would serialize every field of the Ajax Cart API, about 1.5 KB per line, against [ADR 006](decisions/006-data-island-payload-budgets.md)'s explicit shapes; the snippet is about 750 bytes per line. On the example theme's empty cart, the whole island is about 450 bytes.
 
-**Money and translations.** Prices are formatted with `formatMoney(cents, moneyFormat)`, which defaults to the shop's `money_format` from `$locale`, not a hardcoded `$`. It handles all of Shopify's placeholders, such as `{{amount}}` and `{{amount_with_comma_separator}}`, and puts the sign first, as Liquid's `money` filter does (`-$1,234.56`). Translations come from the theme's own `locales/*.json`, exposed to islands at build time, so there is one source of truth.
+**Money and translations.** Prices are formatted with `formatMoney(cents, moneyFormat)`, which defaults to the shop's `money_format` from `$locale`, not a hardcoded `$`. It handles all of Shopify's placeholders, such as `{{amount}}` and `{{amount_with_comma_separator}}`, and puts the sign first, as Liquid's `money` filter does (`-$1,234.56`). Translations come from the theme's own `locales/*.json` through `t('cart.title')`, so there is one source of truth: the build finds the keys the islands use, and Liquid renders those strings into the global data island (see [Translations](#translations)).
 
 ## Build and Dev Workflow
 
@@ -261,13 +261,14 @@ examples/theme-vue/
 ├── assets/              # the theme's own assets, plus Vite's output (vite-*, gitignored)
 ├── blocks/  config/  layout/  locales/
 ├── sections/            # sections that host islands
-├── snippets/            # data-island.liquid and vite-tag.liquid (generated, gitignored)
+├── snippets/            # data-island.liquid, pelago-translations.liquid, vite-tag.liquid (generated, gitignored)
 ├── templates/           # *.json templates and *.data.liquid endpoints
 ├── src/
 │   ├── entrypoints/
 │   │   └── theme.ts     # entry: starts the island loader
 │   ├── islands/         # one component per island
-│   └── sections.d.ts    # types of the section and block settings (generated, committed)
+│   ├── sections.d.ts    # types of the section and block settings (generated, committed)
+│   └── translations.d.ts # types of the translation keys (generated, committed)
 ├── vite.config.ts
 └── package.json
 ```
@@ -283,7 +284,7 @@ export default defineConfig({
 })
 ```
 
-The plugin's options change the island folder, the adapter for each file extension, the theme folder, the built files' prefix, whether it writes the snippet and the settings types, and where, and whether dev shows the island inspector. See `PelagoOptions` in `packages/vite-plugin/src/index.ts`. TypeScript learns the type of `virtual:islands` from `"types": ["@pelagojs/vite-plugin/client"]` in the theme's `tsconfig.json`.
+The plugin's options change the island folder, the adapter for each file extension, the theme folder, the built files' prefix, whether it writes the snippet, the settings types and the translations, and where, and whether dev shows the island inspector. See `PelagoOptions` in `packages/vite-plugin/src/index.ts`. TypeScript learns the type of `virtual:islands` from `"types": ["@pelagojs/vite-plugin/client"]` in the theme's `tsconfig.json`.
 
 ### Settings Types
 
@@ -318,6 +319,37 @@ defineProps<{ name: string } & Pick<SectionSettings['hello-world'], 'greeting'>>
 ```
 
 Renaming or removing the `greeting` setting then fails the type check. The Liquid that builds the JSON is not checked against the types.
+
+### Translations
+
+Islands read the theme's strings with `t()` from `@pelagojs/shopify`, as Liquid does with the `t` filter:
+
+```vue
+<script setup lang="ts">
+import { t } from '@pelagojs/shopify'
+</script>
+
+<template>
+  <h2>{{ t('cart.title') }} <small>{{ t('cart.item_count', { count }) }}</small></h2>
+</template>
+```
+
+The strings aren't bundled. Shopify serves one locale per request, and merchants change strings in the admin ("Edit default theme content", Translate & Adapt), which the theme's files don't hold, so only Liquid knows a page's strings. The plugin scans the code under `src/` for `t('…')` calls in files that import `t` from a `@pelagojs/` package, and writes `snippets/pelago-translations.liquid`, which renders each key it found with `| t | json`. `layout/theme.liquid` puts it in the global data island:
+
+```liquid
+"translations": {% render 'pelago-translations' %}
+```
+
+A page carries only the strings the islands use: the example's 15 come to about 500 bytes, counted against the [ADR 006](decisions/006-data-island-payload-budgets.md) budget like the rest of the island. The plugin writes the snippet on every dev run and build, and again in dev when a file under `src/` or `locales/` changes. With no `t()` calls, it renders `{}`.
+
+How `t()` follows the `t` filter:
+
+- **Variables** fill `{{ name }}` placeholders: `t('gift_card.expires_on', { expires_on: date })`. Liquid renders the strings without variables, which leaves the placeholders for `t()`.
+- **Plurals:** a key whose value is an object of plural forms (`one`, `other`, and `zero`, `two`, `few` or `many`) is rendered once per form any of the theme's locale files has. `t(key, { count })` picks the form for the count in the request's language with `Intl.PluralRules`, falling back to `other`.
+- **HTML:** Liquid HTML-escapes the strings of keys without `_html`, so `t()` unescapes them and returns plain text, for `{{ }}` in a template. A key ending in `_html` returns HTML, with its variables escaped, for `v-html`.
+- **A missing key** (not on the page, or rendered as `Translation missing: …`) returns the key itself, with one console warning.
+
+The scan only reads string keys. A key built at runtime, such as ``t(`cart.${name}`)``, warns at build and goes in `pelago({ translations: { include: ['cart.remove'] } })`. A key missing from `locales/*.default.json` warns and is left out. The plugin also writes the keys of `locales/*.default.json`, each with its variables, to `src/translations.d.ts`, which adds them to `TranslationKeys` in `@pelagojs/shopify`. A misspelled key or variable then fails the type check. Like `sections.d.ts`, the file is committed. `pelago({ translations: false })` turns all of it off.
 
 ### Island Inspector
 

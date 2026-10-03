@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
-import { addToCart, CartError, formatMoney } from '@pelagojs/shopify'
+import { addToCart, CartError, formatMoney, t } from '@pelagojs/shopify'
 import { useCartOpen, useLocale } from '@pelagojs/vue'
 
 interface Variant {
@@ -21,13 +21,6 @@ const props = defineProps<{
     hasOnlyDefaultVariant: boolean
   }
   selectedVariantId: number
-  strings: {
-    addToCart: string
-    soldOut: string
-    unavailable: string
-    quantity: string
-    error: string
-  }
 }>()
 
 const root = useTemplateRef('root')
@@ -88,7 +81,7 @@ async function add(): Promise<void> {
     cartOpen.value = true
   } catch (e) {
     console.error('[product-form]', e)
-    error.value = (e instanceof CartError && e.description) || props.strings.error
+    error.value = (e instanceof CartError && e.description) || t('cart.error')
   } finally {
     adding.value = false
   }
@@ -111,12 +104,18 @@ async function add(): Promise<void> {
     <p class="product-form__price">{{ price }}</p>
 
     <label>
-      {{ strings.quantity }}
+      {{ t('product.quantity') }}
       <input v-model.number="quantity" type="number" name="quantity" min="1" required />
     </label>
 
     <button type="submit" :disabled="!variant?.available || adding" :aria-busy="adding">
-      {{ !variant ? strings.unavailable : variant.available ? strings.addToCart : strings.soldOut }}
+      {{
+        !variant
+          ? t('product.unavailable')
+          : variant.available
+            ? t('product.add_to_cart')
+            : t('product.sold_out')
+      }}
     </button>
 
     <p v-if="error" class="product-form__error" role="alert">{{ error }}</p>

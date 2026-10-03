@@ -50,7 +50,8 @@
         {%- else -%}
           null
         {%- endif -%},
-        "cart": {% render 'cart-json' %}
+        "cart": {% render 'cart-json' %},
+        "translations": {% render 'pelago-translations' %}
       }
     {%- endcapture -%}
     {% render 'data-island', id: 'global', json: global_props %}

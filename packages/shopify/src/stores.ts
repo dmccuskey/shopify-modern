@@ -35,6 +35,8 @@ export interface GlobalProps {
   locale?: Partial<Locale>
   customer?: Customer | null
   cart?: Cart | null
+  /** The strings of the theme's `locales/*.json` that the islands use, by key, rendered by the Vite plugin's snippet. */
+  translations?: Record<string, string>
 }
 
 const defaultLocale: Locale = {
@@ -53,6 +55,8 @@ export const $cartOpen = atom(false)
 export const $customer = atom<Customer | null>(null)
 /** The request's locale and money format. */
 export const $locale = atom<Locale>(defaultLocale)
+/** The strings of the theme's `locales/*.json` that the islands use, by key: read them with `t()`. */
+export const $translations = atom<Record<string, string>>({})
 
 // The stores are seeded from the global data island when first used, not on import,
 // so the package has no side effects and the island is read after the DOM is ready.
@@ -65,10 +69,12 @@ function seed(): void {
   if (global?.locale) $locale.set({ ...defaultLocale, ...global.locale })
   if (global?.customer) $customer.set(global.customer)
   if (global?.cart) $cart.set(global.cart)
+  if (global?.translations) $translations.set(global.translations)
 }
 
 onMount($locale, seed)
 onMount($customer, seed)
+onMount($translations, seed)
 onMount($cart, () => {
   seed()
   // keep $cart up to date when apps change the cart

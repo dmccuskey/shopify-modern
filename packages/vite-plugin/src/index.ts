@@ -5,6 +5,7 @@ import type { IslandSize } from '@pelagojs/islands/inspector'
 import { dataIslandSnippet, dataIslandSnippetFile } from '@pelagojs/islands/snippet'
 import { settingsTypes } from './settings.js'
 import { islandSizes, type OutputBundle } from './sizes.js'
+import { translations, translationsSnippetFile } from './translations.js'
 
 /** Where an adapter comes from: `import { [name] } from '[from]'`. */
 export interface AdapterImport {
@@ -36,6 +37,21 @@ export interface PelagoOptions {
    * in `vite dev`. Builds never include it. Default: `true`.
    */
   inspector?: boolean
+  /**
+   * The strings of the theme's `locales/*.json` for `t()` in `@pelagojs/shopify`, or `false` to leave them out.
+   * The plugin finds the `t('…')` calls in the island code and writes `snippets/pelago-translations.liquid`,
+   * which renders those strings in the request's locale, and the types of the keys.
+   */
+  translations?: TranslationsOptions | false
+}
+
+export interface TranslationsOptions {
+  /** The folder to scan for `t('…')` calls, relative to Vite's root. Default: `src`. */
+  scanDir?: string
+  /** Keys to render even when the scan doesn't find them, such as keys built at runtime. */
+  include?: string[]
+  /** Where to write the types of the keys, relative to Vite's root, or `false`. Default: `src/translations.d.ts`. */
+  types?: string | false
 }
 
 const defaultAdapters: Record<string, AdapterImport> = {
@@ -62,6 +78,24 @@ export default function pelago(options: PelagoOptions = {}): Plugin {
     const { source, warnings } = settingsTypes(themeDir)
     for (const warning of warnings) config.logger.warn(`[pelago] ${warning}`)
     writeIfChanged(path.resolve(config.root, options.settingsTypes ?? 'src/sections.d.ts'), source)
+  }
+
+  /** Writes the translations snippet and types; warns only when the warnings change, as dev runs this on every save. */
+  let translationWarnings = ''
+  function writeTranslations() {
+    if (options.translations === false) return
+    const { scanDir = 'src', include, types: typesFile } = options.translations ?? {}
+    const { snippet, types, warnings } = translations({
+      themeDir,
+      scanDir: path.resolve(config.root, scanDir),
+      include,
+    })
+    if (warnings.join('\n') !== translationWarnings)
+      for (const warning of warnings) config.logger.warn(`[pelago] ${warning}`)
+    translationWarnings = warnings.join('\n')
+    writeIfChanged(path.join(themeDir, 'snippets', translationsSnippetFile), snippet)
+    if (typesFile !== false)
+      writeIfChanged(path.resolve(config.root, typesFile ?? 'src/translations.d.ts'), types)
   }
 
   const sizesFile = () => path.join(config.cacheDir, 'pelago-sizes.json')
@@ -107,6 +141,7 @@ export default function pelago(options: PelagoOptions = {}): Plugin {
 
     buildStart() {
       writeSettingsTypes()
+      writeTranslations()
       if (options.snippet === false) return
       writeIfChanged(path.join(themeDir, 'snippets', dataIslandSnippetFile), dataIslandSnippet)
     },
@@ -140,6 +175,19 @@ export default function pelago(options: PelagoOptions = {}): Plugin {
       server.watcher.on('add', onThemeChange)
       server.watcher.on('change', onThemeChange)
       server.watcher.on('unlink', onThemeChange)
+
+      // a changed island or locale file changes the translations
+      const onTranslationsChange = (file: string) => {
+        if (options.translations === false) return
+        const scanDir = path.resolve(config.root, options.translations?.scanDir ?? 'src')
+        const inScanDir = !path.relative(scanDir, file).startsWith('..')
+        const isLocale = path.relative(themeDir, path.dirname(file)) === 'locales'
+        if ((inScanDir && !file.endsWith('.d.ts')) || (isLocale && file.endsWith('.json')))
+          writeTranslations()
+      }
+      server.watcher.on('add', onTranslationsChange)
+      server.watcher.on('change', onTranslationsChange)
+      server.watcher.on('unlink', onTranslationsChange)
     },
 
     writeBundle(outputOptions, bundle) {

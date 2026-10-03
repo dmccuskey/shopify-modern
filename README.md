@@ -185,7 +185,7 @@ import { islands } from 'virtual:islands'
 startIslands(islands)
 ```
 
-Then add islands as above. The plugin writes `snippets/data-island.liquid` and `src/sections.d.ts` on every dev run and build. Add `"@pelagojs/vite-plugin/client"` to `types` in `tsconfig.json` so TypeScript knows `virtual:islands`. The shared stores read the shop's locale, customer and cart from a global data island in `layout/theme.liquid`; the example theme's [layout](examples/theme-vue/layout/theme.liquid) shows it.
+Then add islands as above. The plugin writes `snippets/data-island.liquid`, `snippets/pelago-translations.liquid`, `src/sections.d.ts` and `src/translations.d.ts` on every dev run and build. Add `"@pelagojs/vite-plugin/client"` to `types` in `tsconfig.json` so TypeScript knows `virtual:islands`. The shared stores read the shop's locale, customer, cart and translations from a global data island in `layout/theme.liquid`; the example theme's [layout](examples/theme-vue/layout/theme.liquid) shows it.
 
 ## Documentation
 

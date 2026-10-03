@@ -23,7 +23,11 @@
     "subtotal": "Subtotal",
     "error": "Something went wrong. Please try again.",
     "decrease": "Decrease quantity",
-    "increase": "Increase quantity"
+    "increase": "Increase quantity",
+    "item_count": {
+      "one": "{{ count }} item",
+      "other": "{{ count }} items"
+    }
   },
   "customers": {
     "login": {
