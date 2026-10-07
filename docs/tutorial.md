@@ -119,14 +119,19 @@ The top of the section works out the end time, and renders the bar:
   else
     assign ends_at = 'now' | date: '%Y-%m-%d 23:59:59'
   endif
-  assign ends_at_seconds = ends_at | date: '%s'
+  assign ends_at_seconds = ends_at | date: '%s' | plus: 0
+  assign now_seconds = 'now' | date: '%s' | plus: 0
 -%}
 
 <div class="announcement">
   <p>
     {{ section.settings.message }}
     <span data-island="announcement-countdown" data-island-id="{{ section.id }}" data-island-load="idle">
-      Ends {{ ends_at | date: '%B %-d at %-I:%M %p' }}.
+      {% if ends_at_seconds > now_seconds -%}
+        Ends {{ ends_at | date: '%B %-d at %-I:%M %p' }}.
+      {%- else -%}
+        {{ section.settings.ended_message }}
+      {%- endif %}
     </span>
   </p>
 </div>
@@ -139,6 +144,8 @@ The `<span>` is the **mount element**:
 - `data-island-load="idle"` mounts it when the browser is idle. The fallback already shows the end time, so the countdown isn't urgent, and the product form and other eager islands go first.
 
 Its content is the **fallback markup**: what customers see before the island mounts, and if JavaScript fails. Here it's the end time, which Liquid can work out; the time left changes every second, so only the island can show it.
+
+Once the end time has passed, the fallback is the ended message instead, the same text the island shows. Liquid compares the two times as numbers: `plus: 0` turns the text from `date: '%s'` into a number.
 
 **Try it:** view the page's source (Cmd+Option+U in Chrome). The bar there says "Ends October 1 at 11:59 PM.", with today's date: that's the page as Liquid rendered it, before any JavaScript ran.
 

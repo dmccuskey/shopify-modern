@@ -4,14 +4,19 @@
   else
     assign ends_at = 'now' | date: '%Y-%m-%d 23:59:59'
   endif
-  assign ends_at_seconds = ends_at | date: '%s'
+  assign ends_at_seconds = ends_at | date: '%s' | plus: 0
+  assign now_seconds = 'now' | date: '%s' | plus: 0
 -%}
 
 <div class="announcement">
   <p>
     {{ section.settings.message }}
     <span data-island="announcement-countdown" data-island-id="{{ section.id }}" data-island-load="idle">
-      Ends {{ ends_at | date: '%B %-d at %-I:%M %p' }}.
+      {% if ends_at_seconds > now_seconds -%}
+        Ends {{ ends_at | date: '%B %-d at %-I:%M %p' }}.
+      {%- else -%}
+        {{ section.settings.ended_message }}
+      {%- endif %}
     </span>
   </p>
 </div>
