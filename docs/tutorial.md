@@ -165,7 +165,7 @@ Three rules show here:
 - **Do the work in Liquid where you can.** Liquid turns the date text into milliseconds, in the store's time zone, so the island doesn't parse dates.
 - **Settings keep their names.** `ended_message` and `show_seconds` are named as in the schema, so the component can take their types from `sections.d.ts`. `endsAt` isn't a setting, so it gets its own name.
 
-The data island is outside the mount element, so it stays on the page after the island mounts. One inside the mount element works too, as in `hello-world.liquid`, but the mount replaces it, and the inspector then can't show its size.
+The data island is outside the mount element, so it stays on the page after the island mounts. One inside the mount element works too, as in `hello-world.liquid`, but the mount replaces it, so the same element can't be mounted a second time.
 
 ### 4. The Component
 
@@ -233,13 +233,13 @@ Open the island inspector with the `◆ 3 islands` button in the corner, or Alt+
 
 | Island | Rule | Mount | Props | Bundle |
 |---|---|---|---|---|
-| cart-drawer | idle | 49 ms | – | 1.7 KB |
+| cart-drawer | idle | 49 ms | 615 B | 1.7 KB |
 | announcement-countdown | idle | 50 ms | 91 B | – |
-| hello-island | eager | 295 ms | – | 299 B |
+| hello-island | eager | 295 ms | 53 B | 299 B |
 
 - **Rule** is the loading rule, as the runtime scheduled it.
 - **Mount** is the time from the rule firing to the component being on the page.
-- **Props** is the size of the island's own data island. It shows "–" for the other two, whose data islands are inside their mount elements (see step 3).
+- **Props** is the size of the island's own data island, wherever it is: the other two have theirs inside their mount elements (see step 3). It shows "–" for an island without one.
 - **Bundle** is the gzipped size of the island's own code, from the last `npm run build`. It shows "–" for an island added since.
 
 The line under the table adds up every data island on the page against the 30 KB budget.
