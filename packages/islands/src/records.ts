@@ -20,10 +20,21 @@ export interface IslandRecord {
   failed?: boolean
 }
 
-/** The scheduled and mounted islands. An island leaves when it's unmounted or cancelled. */
-export const records = new Map<HTMLElement, IslandRecord>()
+interface Shared {
+  records: Map<HTMLElement, IslandRecord>
+  listeners: Set<() => void>
+}
 
-const listeners = new Set<() => void>()
+// One set of records per page, whatever the number of copies of this module: Vite's dev server can hand
+// the runtime and the inspector a copy each, when it prebundles them in separate runs.
+const key = Symbol.for('pelago.records')
+const global = globalThis as { [key]?: Shared }
+const shared = (global[key] ??= { records: new Map(), listeners: new Set() })
+
+/** The scheduled and mounted islands. An island leaves when it's unmounted or cancelled. */
+export const records = shared.records
+
+const listeners = shared.listeners
 
 /** Calls `listener` after each change to `records`. Returns a function that stops it. */
 export function onRecordsChange(listener: () => void): () => void {

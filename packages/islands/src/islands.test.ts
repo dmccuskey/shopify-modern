@@ -282,6 +282,18 @@ describe('theme editor', () => {
 })
 
 describe('island records, for the inspector', () => {
+  it('shares the records between copies of the module', async () => {
+    vi.resetModules()
+    const copy = await import('./records.js')
+    expect(copy.records).toBe(records)
+
+    const listener = vi.fn()
+    const stop = onRecordsChange(listener)
+    copy.recordsChanged()
+    expect(listener).toHaveBeenCalledOnce()
+    stop()
+  })
+
   it('records each island from scheduled to mounted', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     start('<div id="a" data-island="greeting" data-island-load="bogus"></div>')
