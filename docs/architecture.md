@@ -366,7 +366,7 @@ In `vite dev`, the plugin adds the island inspector to `virtual:islands`: a butt
 
 Below the table it adds up every `script[data-island-props]` on the page, shared ones like `global` included, against the 30 KB budget of [ADR 006](decisions/006-data-island-payload-budgets.md).
 
-The bundle sizes come from the build: each `vite build` writes them to `node_modules/.vite/pelago-sizes.json`, and `vite dev` reads them when it starts, so they are as of the last build before `npm run dev`. The inspector is plain DOM in a shadow root, so the theme's CSS doesn't reach it and it needs no framework. Builds never include it; `pelago({ inspector: false })` turns it off in dev too. It is a separate entry of `@pelagojs/islands` because it reads the runtime's records, which aren't public API.
+The bundle sizes come from the build: each `vite build` writes them to `node_modules/.vite/pelago-sizes.json`, and `vite dev` reads them when it starts, so they are as of the last build before `npm run dev`. The inspector is plain DOM in a shadow root, so the theme's CSS doesn't reach it and it needs no framework. Builds never include it; `pelago({ inspector: false })` turns it off in dev too. It is a separate entry of `@pelagojs/islands` because it reads the runtime's records, which aren't public API. The records live on `globalThis` under `Symbol.for('pelago.records')`, so the inspector sees them even when Vite's dev server gives it its own copy of the module: with the packages installed from npm, Vite prebundles the runtime first and the inspector in a later run.
 
 | Concern | Choice | Note |
 |---|---|---|
