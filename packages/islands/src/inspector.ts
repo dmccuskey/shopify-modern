@@ -42,11 +42,17 @@ export function startInspector(options: InspectorOptions = {}): () => void {
   function render() {
     frame = 0
     const islands = findIslands(options.islands)
-    // every data island counts toward the budget, including those shared by several islands
-    const propsTotal = [...document.querySelectorAll('script[data-island-props]')].reduce(
+    // every data island counts toward the budget, including those shared by several islands,
+    // and those their island replaced when it mounted
+    const onPage = [...document.querySelectorAll('script[data-island-props]')].reduce(
       (sum, script) => sum + byteLength(script.textContent ?? ''),
       0,
     )
+    // by id, so one read by two islands before it was replaced counts once
+    const replaced = new Map(
+      islands.filter((island) => island.replaced).map((island) => [island.id, island.props ?? 0]),
+    )
+    const propsTotal = [...replaced.values()].reduce((sum, size) => sum + size, onPage)
     const toggle = h('button', { class: 'toggle', title: 'Island inspector (Alt+Shift+I)' }, [
       `◆ ${islands.length} island${islands.length === 1 ? '' : 's'}`,
     ])
@@ -158,8 +164,12 @@ interface InspectedIsland {
   el: HTMLElement
   name: string
   rule?: string
+  /** Its `data-island-id`. */
+  id?: string
   /** The size of its data island, if it has one. */
   props?: number
+  /** Its data island is no longer on the page: `props` is the size the runtime recorded at mount. */
+  replaced?: boolean
   state: {
     kind: 'mounted' | 'waiting' | 'loading' | 'failed' | 'unknown'
     label: string
@@ -181,8 +191,11 @@ function findIslands(registered?: string[]): InspectedIsland[] {
     return {
       el,
       name,
+      id,
       rule: record?.rule ?? el.dataset.islandLoad,
-      props: json == null ? undefined : byteLength(json),
+      // a data island inside the mount element is replaced at mount: the runtime recorded its size
+      props: json == null ? record?.props : byteLength(json),
+      replaced: json == null && record?.props !== undefined,
       state: record ? state(record) : unscheduled(name, registered),
     }
   })

@@ -17,6 +17,8 @@ export interface IslandRecord {
   loaded?: number
   /** When its adapter finished mounting it. */
   mounted?: number
+  /** The size of its data island in bytes, as read when it mounted. A data island inside the mount element is gone after that. */
+  props?: number
   failed?: boolean
 }
 

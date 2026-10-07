@@ -152,7 +152,7 @@ The adapter is imported lazily along with the component, so a page with no Vue i
 
 `startIslands` finds every `[data-island]` element once the DOM is ready and schedules it by its loading rule. When an island is due, the loader imports its component (and its adapter, if that's lazy), reads its props with `readProps(el.dataset.islandId)` (`{}` if there are none), and calls the adapter's `mount`. It keeps each island's unmount function, so an island is never mounted twice. It returns `mountIslands(root)` and `unmountIslands(root)`, for code that adds or removes islands itself, and `stop()`.
 
-It also records when each island was scheduled, when its loading rule fired, and when it loaded and mounted, for the [island inspector](#island-inspector), and adds a `[pelago] <name>` measure to the browser's performance timeline for each mount, so islands show in DevTools' Performance panel. Both cost a few numbers per island, so they stay on in production.
+It also records when each island was scheduled, when its loading rule fired, when it loaded and mounted, and the size of its props, for the [island inspector](#island-inspector), and adds a `[pelago] <name>` measure to the browser's performance timeline for each mount, so islands show in DevTools' Performance panel. Both cost a few numbers per island, so they stay on in production.
 
 - **Unknown islands** (a name not in the registry) are skipped, so islands from other code can share the page.
 - **Failures are per island:** if a component fails to load or mount, the loader logs it with `console.error` and mounts the others. If it fails to load, the fallback markup stays.
@@ -361,10 +361,10 @@ In `vite dev`, the plugin adds the island inspector to `virtual:islands`: a butt
 |---|---|
 | Rule | `data-island-load`, as the runtime scheduled it (`eager` for an unknown rule) |
 | Mount | Time from the loading rule firing to the adapter's `mount` returning; the tooltip splits it into load and mount, and the wait for the rule. Or `waiting`, `loading`, `failed`, and `not an island` for a name with no file in `src/islands/` |
-| Props | The size of the island's own data island |
+| Props | The size of the island's own data island. The runtime records it when it reads the props, for a data island inside the mount element, which the mount replaces |
 | Bundle | Gzipped size of the island's own code in the last `vite build`: its chunk, the chunks only it imports, and their CSS. Code the page loads anyway (the entry, the adapter and framework, chunks shared with other islands) isn't counted |
 
-Below the table it adds up every `script[data-island-props]` on the page, shared ones like `global` included, against the 30 KB budget of [ADR 006](decisions/006-data-island-payload-budgets.md).
+Below the table it adds up every `script[data-island-props]` on the page, shared ones like `global` included, and those replaced at mount, against the 30 KB budget of [ADR 006](decisions/006-data-island-payload-budgets.md).
 
 The bundle sizes come from the build: each `vite build` writes them to `node_modules/.vite/pelago-sizes.json`, and `vite dev` reads them when it starts, so they are as of the last build before `npm run dev`. The inspector is plain DOM in a shadow root, so the theme's CSS doesn't reach it and it needs no framework. Builds never include it; `pelago({ inspector: false })` turns it off in dev too. It is a separate entry of `@pelagojs/islands` because it reads the runtime's records, which aren't public API. The records live on `globalThis` under `Symbol.for('pelago.records')`, so the inspector sees them even when Vite's dev server gives it its own copy of the module: with the packages installed from npm, Vite prebundles the runtime first and the inspector in a later run.
 

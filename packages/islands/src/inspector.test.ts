@@ -54,6 +54,26 @@ describe('startInspector', () => {
     )
   })
 
+  it('shows the size of a data island its island replaced when it mounted', async () => {
+    const replacing: Adapter = { mount: (el) => (el.replaceChildren('mounted'), () => {}) }
+    localStorage.setItem('pelago-inspector-open', '1')
+    document.body.innerHTML = `
+      <div data-island="greeting" data-island-id="a">
+        <script type="application/json" data-island-props="a">{"name": "a"}</script>
+      </div>
+      <script type="application/json" data-island-props="global">{"shop": 1}</script>`
+    islands = startIslands({
+      greeting: { load: async () => ({ default: 'Greeting' }), adapter: replacing },
+    })
+    stop = startInspector()
+    await settle()
+    expect(document.querySelector('script[data-island-props="a"]')).toBeNull()
+    expect(rows()[0]?.[3]).toBe('13 B')
+    expect(shadow().querySelector('p')?.textContent).toContain(
+      'Data islands on this page: 24 B of 30.0 KB',
+    )
+  })
+
   it('updates when an island mounts', async () => {
     start('<div id="a" data-island="greeting" data-island-load="interaction"></div>')
     await settle()

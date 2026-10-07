@@ -194,6 +194,20 @@ test('the island inspector lists the islands on the page, and opens with Alt+Shi
   await expect(inspector).toContainText('Data islands on this page:')
 })
 
+test('the island inspector shows the props size of an island that replaced its data island', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const island = page.locator('[data-island="hello-island"]')
+  await expect(island.getByRole('button')).toBeVisible()
+  await expect(island.locator('script[data-island-props]')).toHaveCount(0)
+
+  const inspector = page.locator('#pelago-inspector')
+  await page.keyboard.press('Alt+Shift+KeyI')
+  const row = inspector.getByRole('row').filter({ hasText: 'hello-island' })
+  await expect(row).toContainText(/\d+ B/)
+})
+
 test('the global data island has the strings the islands use', async ({ page }) => {
   await page.goto('/')
   const global = JSON.parse(
