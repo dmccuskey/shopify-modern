@@ -1,4 +1,4 @@
-import { readProps } from './props.js'
+import { readPropsText } from './props.js'
 import { records, recordsChanged, type IslandRecord } from './records.js'
 
 /**
@@ -78,7 +78,9 @@ export function startIslands(registry: IslandRegistry): Islands {
         if (islands.get(el) !== dispose) return
         record.loaded = performance.now()
         const id = el.dataset.islandId
-        const props = (id ? readProps<object>(id) : null) ?? {}
+        const json = id ? readPropsText(id) : undefined
+        if (json) record.props = new TextEncoder().encode(json).length
+        const props = (json ? (JSON.parse(json) as object | null) : null) ?? {}
         unmount = adapter.mount(el, component, props)
         record.mounted = performance.now()
         measure(record)
