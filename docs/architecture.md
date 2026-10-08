@@ -54,10 +54,10 @@ The repository is a monorepo of npm packages plus an example theme that installs
 
 | Package | Provides |
 |---|---|
-| `@pelagojs/islands` (core) | `readProps`, island discovery, loading rules (`eager`, `visible`, `idle`, `interaction`), theme editor lifecycle, the adapter interface, and the island inspector (`@pelagojs/islands/inspector`, development only) |
+| `@pelagojs/islands` (core) | `readProps`, island discovery, loading rules (`eager`, `visible`, `idle`, `interaction`), theme editor lifecycle, the adapter interface, and for development only the island inspector (`@pelagojs/islands/inspector`) and the debug log (`@pelagojs/islands/debug`) |
 | `@pelagojs/shopify` | `formatMoney`, a typed Ajax Cart client, a Section Rendering fetch helper, the translation lookup `t()`, and the shared `$cart`, `$customer`, `$locale` and `$translations` stores |
 | `@pelagojs/vue` | The Vue 3 adapter (mount and unmount) and bindings for the stores |
-| `@pelagojs/vite-plugin` | Builds the island registry from `src/islands/`, and writes the optional `data-island.liquid` snippet, the translations snippet, and the types of the section settings and translation keys into the theme on every dev run and build; starts the island inspector in dev and records each island's size at build |
+| `@pelagojs/vite-plugin` | Builds the island registry from `src/islands/`, and writes the optional `data-island.liquid` snippet, the translations snippet, and the types of the section settings and translation keys into the theme on every dev run and build; starts the island inspector and the debug log in dev, and records each island's size at build |
 | `@pelagojs/react`, `/svelte`, `/wc` | v2.1: the React, Svelte and web component adapters |
 
 ```text
@@ -152,7 +152,7 @@ The adapter is imported lazily along with the component, so a page with no Vue i
 
 `startIslands` finds every `[data-island]` element once the DOM is ready and schedules it by its loading rule. When an island is due, the loader imports its component (and its adapter, if that's lazy), reads its props with `readProps(el.dataset.islandId)` (`{}` if there are none), and calls the adapter's `mount`. It keeps each island's unmount function, so an island is never mounted twice. It returns `mountIslands(root)` and `unmountIslands(root)`, for code that adds or removes islands itself, and `stop()`.
 
-It also records when each island was scheduled, when its loading rule fired, when it loaded and mounted, and the size of its props, for the [island inspector](#island-inspector), and adds a `[pelago] <name>` measure to the browser's performance timeline for each mount, so islands show in DevTools' Performance panel. Both cost a few numbers per island, so they stay on in production.
+It also records when each island was scheduled, when its loading rule fired, when it loaded and mounted, and the size of its props, for the [island inspector](#island-inspector), and adds a `[pelago] <name>` measure to the browser's performance timeline for each mount, so islands show in DevTools' Performance panel. Each step (islands found, loading, mounted, failed, cancelled, unmounted) also goes on a list of the last 200 events, which the inspector and the [debug log](#debug-log) read ([ADR 008](decisions/008-debug-logging-from-a-runtime-event-list.md)). All of this costs a few numbers and objects per island, so it stays on in production.
 
 - **Unknown islands** (a name not in the registry) are skipped, so islands from other code can share the page.
 - **Failures are per island:** if a component fails to load or mount, the loader logs it with `console.error` and mounts the others. If it fails to load, the fallback markup stays.
@@ -286,7 +286,7 @@ export default defineConfig({
 })
 ```
 
-The plugin's options change the island folder, the adapter for each file extension, the theme folder, the built files' prefix, whether it writes the snippet, the settings types and the translations, and where, and whether dev shows the island inspector. See `PelagoOptions` in `packages/vite-plugin/src/index.ts`. TypeScript learns the type of `virtual:islands` from `"types": ["@pelagojs/vite-plugin/client"]` in the theme's `tsconfig.json`.
+The plugin's options change the island folder, the adapter for each file extension, the theme folder, the built files' prefix, whether it writes the snippet, the settings types and the translations, and where, and whether dev shows the island inspector and the debug log. See `PelagoOptions` in `packages/vite-plugin/src/index.ts`. TypeScript learns the type of `virtual:islands` from `"types": ["@pelagojs/vite-plugin/client"]` in the theme's `tsconfig.json`.
 
 ### Settings Types
 
@@ -368,6 +368,36 @@ Below the table it adds up every `script[data-island-props]` on the page, shared
 
 The bundle sizes come from the build: each `vite build` writes them to `node_modules/.vite/pelago-sizes.json`, and `vite dev` reads them when it starts, so they are as of the last build before `npm run dev`. The inspector is plain DOM in a shadow root, so the theme's CSS doesn't reach it and it needs no framework. Builds never include it; `pelago({ inspector: false })` turns it off in dev too. It is a separate entry of `@pelagojs/islands` because it reads the runtime's records, which aren't public API. The records live on `globalThis` under `Symbol.for('pelago.records')`, so the inspector sees them even when Vite's dev server gives it its own copy of the module: with the packages installed from npm, Vite prebundles the runtime first and the inspector in a later run.
 
+### Debug Log
+
+The debug log prints a line to the browser's console for each thing the runtime does ([ADR 008](decisions/008-debug-logging-from-a-runtime-event-list.md)). It is off by default, and for development only: builds never include it.
+
+```text
+[pelago:islands] +700 ms found 3 islands {islands: Array(3), unknown: Array(0), root: document}
+[pelago:islands] +700 ms hello-island: loading (eager) {…}
+[pelago:islands] +818 ms cart-drawer: loading (idle, waited 118 ms) {…}
+[pelago:islands] +827 ms hello-island: mounted in 127 ms {load: 121, mount: 6, props: 53, el: div}
+```
+
+Turn it on in either way:
+
+- `pelago({ debug: true })` in the Vite config, or a list of areas, `pelago({ debug: ['islands'] })`. Restart `vite dev` after changing it.
+- `localStorage.setItem('pelago-debug', '*')` in the browser's console, then reload. The value is `*` for every area, a list separated by commas, or `0` for none. When the key is set, it wins over the option; `localStorage.removeItem('pelago-debug')` goes back to the option.
+
+The lines are `console.debug`, which Chrome hides until "Verbose" is on in the console's "Default levels" menu. Typing `pelago` in the console's filter shows only them.
+
+| Line | When |
+|---|---|
+| `found 3 islands` | A pass over the page, or over a section the theme editor loaded, scheduled islands. A `data-island` name with no entry in the registry is named in the line: the usual reason an island doesn't mount |
+| `<name>: loading (<rule>)` | The island's loading rule fired and its component started loading, with how long it waited for the rule |
+| `<name>: mounted in 37 ms` | The adapter mounted it. The object has the load and mount times, the props size in bytes, and the element |
+| `<name>: cancelled before it mounted` | It was unmounted while still waiting or loading, for example when the theme editor reloaded its section |
+| `<name>: unmounted` | It was unmounted after it mounted |
+
+A failed island has no line of its own: the runtime's error, `[pelago] island "<name>" failed to mount`, is always on, in builds too. Each line starts with the time since the page started loading, because the log starts after the runtime and prints what it missed first.
+
+`islands` is the only area so far. The runtime keeps the events on a list on `globalThis`, next to the records, and the log is one reader of it, in its own entry (`@pelagojs/islands/debug`) like the inspector.
+
 | Concern | Choice | Note |
 |---|---|---|
 | Bundler | Vite with barrel's [`vite-plugin-shopify`](https://github.com/barrel/shopify-vite) | Writes hashed chunks to `assets/` and generates the snippet that emits the `<script>` tags, including the dev server's in development |
@@ -409,3 +439,4 @@ The reasons behind the design are in the [architecture decision records](decisio
 - [ADR 005](decisions/005-example-theme-on-skeleton-any-theme-supported.md): the example theme on Shopify's skeleton theme, with support for any OS 2.0 theme
 - [ADR 006](decisions/006-data-island-payload-budgets.md): data island payload budgets
 - [ADR 007](decisions/007-pelago-name-and-npm-scope.md): the Pelago name and the `@pelagojs` npm scope
+- [ADR 008](decisions/008-debug-logging-from-a-runtime-event-list.md): debug logging from a runtime event list

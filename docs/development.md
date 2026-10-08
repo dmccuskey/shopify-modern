@@ -34,6 +34,7 @@ This needs a Shopify development store; one can be created for free with a [Shop
 2. Run `npm run dev` from the repository root. It builds the packages, then starts the Vite dev server and `shopify theme dev` together. The Shopify CLI asks you to log in the first time.
 3. Open the preview URL that `shopify theme dev` prints (usually `http://127.0.0.1:9292`). Changes to Liquid and to the islands reload in the browser.
 4. The `◆ islands` button in the corner (or Alt+Shift+I) opens the [island inspector](architecture.md#island-inspector): each island's loading rule, mount time, props size and bundle size. Bundle sizes need a `npm run build` before `npm run dev`.
+5. To see what the runtime does as it does it, run `localStorage.setItem('pelago-debug', '*')` in the browser's console, turn on "Verbose" in the console's levels, and reload: the [debug log](architecture.md#debug-log) prints a line as each island is found, loads and mounts.
 
 `npm run deploy -w examples/theme-vue` builds the assets and runs `shopify theme push`.
 
@@ -98,6 +99,7 @@ What v2 is planned to include, by release. There are no dates: releases ship whe
 | Cart sync with apps | Watches `fetch` and XHR calls to `/cart/*` and refreshes the shared cart store after each | Apps change the cart behind the theme's back, leaving drawers and counts stale |
 | Typed props from section schemas | Reads each section's `{% schema %}` and generates TypeScript types for its `settings` | Autocomplete, and a renamed setting fails at build time instead of in the store |
 | Island inspector (development only) | An overlay showing each island's loading rule, props size, mount time and bundle size | Makes performance visible while building |
+| Debug log (development only) | Opt-in console lines as each island is found, loads and mounts | Shows the order of events when learning the code, or when an island doesn't mount ([ADR 008](decisions/008-debug-logging-from-a-runtime-event-list.md)) |
 
 ### v2.1
 
