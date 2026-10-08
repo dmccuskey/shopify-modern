@@ -37,6 +37,16 @@ This needs a Shopify development store; one can be created for free with a [Shop
 
 `npm run deploy -w examples/theme-vue` builds the assets and runs `shopify theme push`.
 
+### Debugging in VS Code
+
+The repository's `.vscode/launch.json` opens Chrome on the preview with VS Code's debugger attached, so breakpoints set in the editor stop in the browser.
+
+1. Start `npm run dev` and wait for the preview.
+2. Open the repository's folder in VS Code, and run "Debug the example theme in Chrome" from the Run and Debug view (or press F5). Chrome opens as a separate instance with its own empty profile, without your extensions or logins.
+3. Set breakpoints in the theme's `src/` (TypeScript and a Vue component's `<script setup>`) or in a package's `src/`, such as `packages/islands/src/islands.ts`. Stepping into a package from an island works too.
+
+This works only on the dev server, not on a built theme (`npm run build`, `npm run dev:editor`): the build's files have no source maps. Breakpoints in a package go through its built `dist/` files, so after changing a package, run `npx tsc -b` and reload the page.
+
 ### Testing in the Theme Editor
 
 `npm run dev` doesn't work in the theme editor. The editor's preview is served by Shopify, not by the local preview, so it loads the islands from the Vite dev server on `localhost`, and Chrome blocks a store's page from reaching `localhost` (Local Network Access). The islands then show their fallback markup, and the preview frame's console reports that permission was denied for the `loopback` address space. Allowing Chrome's local network prompt doesn't help: it applies to the Shopify admin, not to the preview frame inside it.

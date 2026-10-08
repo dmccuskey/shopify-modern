@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug the example theme in Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:9292",
+      "webRoot": "${workspaceFolder}/examples/theme-vue",
+      "pathMapping": {
+        "/@fs/": "/"
+      },
+      "resolveSourceMapLocations": ["${workspaceFolder}/**", "http://localhost:5173/**"]
+    }
+  ]
+}
