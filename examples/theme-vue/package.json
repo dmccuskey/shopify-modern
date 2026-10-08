@@ -28,6 +28,7 @@
     "@shopify/cli": "^4.8.2",
     "@vitejs/plugin-vue": "^6.0.9",
     "npm-run-all2": "^9.0.3",
+    "typescript": "~6.0.3",
     "vite": "^8.3.1",
     "vite-plugin-shopify": "^5.0.0",
     "vue-tsc": "^3.3.11"
