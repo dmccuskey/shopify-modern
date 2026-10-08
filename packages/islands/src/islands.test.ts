@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { startIslands, type Adapter, type IslandRegistry, type Islands } from './islands.js'
-import { onRecordsChange, records } from './records.js'
+import { events, onEvent, records, type RuntimeEvent } from './records.js'
 
 // a fake adapter that records mounts, and writes the props into the element
 const mounts: { el: HTMLElement; props: object }[] = []
@@ -40,6 +40,7 @@ afterEach(() => {
   islands = undefined
   // failed islands stay recorded
   records.clear()
+  events.length = 0
   document.body.innerHTML = ''
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
@@ -287,10 +288,20 @@ describe('island records, for the inspector', () => {
     const copy = await import('./records.js')
     expect(copy.records).toBe(records)
 
+    expect(copy.events).toBe(events)
+
     const listener = vi.fn()
-    const stop = onRecordsChange(listener)
-    copy.recordsChanged()
-    expect(listener).toHaveBeenCalledOnce()
+    const stop = onEvent(listener)
+    const event: RuntimeEvent = {
+      area: 'islands',
+      type: 'found',
+      time: 0,
+      root: document,
+      islands: [],
+      unknown: [],
+    }
+    copy.emit(event)
+    expect(listener).toHaveBeenCalledExactlyOnceWith(event)
     stop()
   })
 
@@ -329,7 +340,7 @@ describe('island records, for the inspector', () => {
 
   it('forgets an island when it is unmounted, and tells the listeners', async () => {
     const listener = vi.fn()
-    const stop = onRecordsChange(listener)
+    const stop = onEvent(listener)
     const islands = start('<div id="a" data-island="greeting"></div>')
     await settle()
     expect(listener).toHaveBeenCalled()
@@ -338,5 +349,94 @@ describe('island records, for the inspector', () => {
     expect(records.has(island('a'))).toBe(false)
     expect(listener).toHaveBeenCalledOnce()
     stop()
+  })
+})
+
+describe('events, for the debug log and the inspector', () => {
+  const types = () => events.map((event) => event.type)
+
+  it('tells what it found before the islands load, then each step', async () => {
+    start(`
+      <div id="a" data-island="greeting"></div>
+      <div id="b" data-island="greeting" data-island-load="interaction"></div>
+      <div data-island="unknown"></div>`)
+    expect(types()).toEqual(['found', 'loading'])
+    expect(events[0]).toMatchObject({
+      area: 'islands',
+      root: document,
+      islands: [
+        { el: island('a'), rule: 'eager' },
+        { el: island('b'), rule: 'interaction' },
+      ],
+      unknown: ['unknown'],
+    })
+    await settle()
+    expect(types()).toEqual(['found', 'loading', 'mounted'])
+    const record = records.get(island('a'))!
+    expect(events[1]).toEqual({
+      area: 'islands',
+      type: 'loading',
+      time: record.triggered,
+      island: record,
+    })
+    expect(events[2]).toEqual({
+      area: 'islands',
+      type: 'mounted',
+      time: record.mounted,
+      island: record,
+    })
+  })
+
+  it('says nothing for a pass that finds nothing new', async () => {
+    const islands = start('<div data-island="greeting"></div>')
+    await settle()
+    events.length = 0
+    islands.mountIslands()
+    expect(events).toEqual([])
+  })
+
+  it('tells a failed island, with its error', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const error = new Error('404')
+    start('<div id="a" data-island="broken"></div>', {
+      broken: { load: () => Promise.reject(error), adapter },
+    })
+    await settle()
+    expect(types()).toEqual(['found', 'loading', 'failed'])
+    expect(events[2]).toMatchObject({ island: { el: island('a'), failed: true }, error })
+  })
+
+  it('tells an unmounted island from one cancelled before it mounted', async () => {
+    const islands = start(`
+      <div id="a" data-island="greeting"></div>
+      <div id="b" data-island="greeting" data-island-load="interaction"></div>`)
+    await settle()
+    events.length = 0
+    islands.unmountIslands()
+    expect(events).toMatchObject([
+      { type: 'unmounted', island: { el: island('a') } },
+      { type: 'cancelled', island: { el: island('b') } },
+    ])
+  })
+
+  it('keeps the last 200 events', async () => {
+    const { emit } = await import('./records.js')
+    for (let time = 0; time < 250; time++) {
+      emit({ area: 'islands', type: 'found', time, root: document, islands: [], unknown: [] })
+    }
+    expect(events).toHaveLength(200)
+    expect(events[0]?.time).toBe(50)
+  })
+
+  it('carries on when a listener throws', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const stop = onEvent(() => {
+      throw new Error('broken reader')
+    })
+    start('<div data-island="greeting"></div>')
+    await settle()
+    stop()
+    expect(mounts).toHaveLength(1)
+    expect(error).toHaveBeenCalledWith('[pelago] an event listener failed', expect.any(Error))
   })
 })

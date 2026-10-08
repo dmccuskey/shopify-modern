@@ -1,4 +1,4 @@
-import { records, onRecordsChange, type IslandRecord } from './records.js'
+import { records, onEvent, type IslandRecord } from './records.js'
 
 /** An island's share of the last build: its own chunks, which no other island or entry loads. */
 export interface IslandSize {
@@ -140,7 +140,7 @@ export function startInspector(options: InspectorOptions = {}): () => void {
     if (event.altKey && event.shiftKey && event.code === 'KeyI') setOpen(!open)
   }
 
-  const stopRecords = onRecordsChange(update)
+  const stopRecords = onEvent(update)
   document.addEventListener('keydown', onKey)
   document.addEventListener('shopify:section:load', update)
   document.addEventListener('shopify:section:unload', update)

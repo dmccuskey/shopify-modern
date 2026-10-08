@@ -98,6 +98,14 @@ describe('registryModule', () => {
     expect(registryModule([], adapters)).not.toContain('inspector')
   })
 
+  it('starts the debug log when asked, with its areas', () => {
+    expect(registryModule([], adapters, undefined, ['*'])).toContain(
+      `import('@pelagojs/islands/debug').then((m) => m.startDebug({"areas":["*"]}))`,
+    )
+    expect(registryModule([], adapters, undefined, [])).toContain('startDebug({"areas":[]})')
+    expect(registryModule([], adapters)).not.toContain('debug')
+  })
+
   it('rejects an adapter name that is not an identifier', () => {
     const island = { name: 'a', file: '/a.vue', extension: '.vue' }
     expect(() =>

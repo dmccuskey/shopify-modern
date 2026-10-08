@@ -1,5 +1,5 @@
 import { readPropsText } from './props.js'
-import { records, recordsChanged, type IslandRecord } from './records.js'
+import { emit, records, type IslandRecord } from './records.js'
 
 /**
  * Mounts a component on an element. Each framework adapter implements this.
@@ -43,12 +43,8 @@ export function startIslands(registry: IslandRegistry): Islands {
   // each scheduled or mounted island, with the function that cancels or unmounts it
   const islands = new Map<HTMLElement, () => void>()
 
-  function schedule(el: HTMLElement) {
-    const name = el.dataset.island
-    if (!name || islands.has(el)) return
-    const entry = registry[name]
-    if (!entry) return
-
+  /** Records the island and returns the function that starts its loading rule. */
+  function schedule(el: HTMLElement, name: string, entry: IslandEntry) {
     const rule = loadingRule(el)
     const record: IslandRecord = { el, name, rule, scheduled: performance.now() }
     let unmount: (() => void) | undefined
@@ -57,18 +53,20 @@ export function startIslands(registry: IslandRegistry): Islands {
       cancel()
       unmount?.()
       islands.delete(el)
-      if (records.get(el) === record) {
-        records.delete(el)
-        recordsChanged()
-      }
+      if (records.get(el) === record) records.delete(el)
+      emit({
+        area: 'islands',
+        type: record.mounted === undefined ? 'cancelled' : 'unmounted',
+        time: performance.now(),
+        island: record,
+      })
     }
     islands.set(el, dispose)
     records.set(el, record)
-    recordsChanged()
 
     const mount = async () => {
       record.triggered = performance.now()
-      recordsChanged()
+      emit({ area: 'islands', type: 'loading', time: record.triggered, island: record })
       try {
         const [{ default: component }, adapter] = await Promise.all([
           entry.load(),
@@ -84,19 +82,42 @@ export function startIslands(registry: IslandRegistry): Islands {
         unmount = adapter.mount(el, component, props)
         record.mounted = performance.now()
         measure(record)
-        recordsChanged()
+        emit({ area: 'islands', type: 'mounted', time: record.mounted, island: record })
       } catch (error) {
         if (islands.get(el) === dispose) islands.delete(el)
         record.failed = true
-        recordsChanged()
+        emit({ area: 'islands', type: 'failed', time: performance.now(), island: record, error })
         console.error(`[pelago] island "${name}" failed to mount`, error)
       }
     }
-    cancel = whenReady(el, rule, mount)
+    const start = () => {
+      // a listener of `found` may have unmounted it
+      if (islands.get(el) === dispose) cancel = whenReady(el, rule, mount)
+    }
+    return { record, start }
   }
 
   function mountIslands(root: ParentNode = document) {
-    for (const el of findIslands(root)) schedule(el)
+    const scheduled: ReturnType<typeof schedule>[] = []
+    const unknown: string[] = []
+    for (const el of findIslands(root)) {
+      const name = el.dataset.island
+      if (!name || islands.has(el)) continue
+      const entry = registry[name]
+      if (entry) scheduled.push(schedule(el, name, entry))
+      else unknown.push(name)
+    }
+    if (!scheduled.length && !unknown.length) return
+    // before any of them starts loading, so the events read in order
+    emit({
+      area: 'islands',
+      type: 'found',
+      time: performance.now(),
+      root,
+      islands: scheduled.map(({ record }) => record),
+      unknown,
+    })
+    for (const { start } of scheduled) start()
   }
 
   function unmountIslands(root: ParentNode = document) {

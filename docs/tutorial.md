@@ -67,7 +67,7 @@ What happens when a customer opens the home page:
 | Part | Runs | Does |
 |---|---|---|
 | Liquid | on Shopify, for every request | the page, the fallback markup, the props as JSON |
-| `@pelagojs/vite-plugin` | in `vite dev` and `vite build` | the island registry, the `data-island` snippet, the settings types, the inspector in dev |
+| `@pelagojs/vite-plugin` | in `vite dev` and `vite build` | the island registry, the `data-island` snippet, the settings types, the inspector and the debug log in dev |
 | `@pelagojs/islands` | in the browser, on every page | finding islands, loading rules, reading props, the theme editor events |
 | `@pelagojs/vue` | in the browser, once a Vue island is due | mounting and unmounting Vue components, the store composables |
 | `@pelagojs/shopify` | in the browser, in islands that import it | the cart client, `formatMoney`, the shared stores, cart sync with apps |
@@ -250,6 +250,20 @@ Open the island inspector with the `◆ 3 islands` button in the corner, or Alt+
 - **Bundle** is the gzipped size of the island's own code, from the last `npm run build`. It shows "–" for an island added since.
 
 The line under the table adds up every data island on the page against the 30 KB budget.
+
+**Try it:** watch the islands come alive in the console. Open DevTools' console, turn on "Verbose" in its "Default levels" menu, run `localStorage.setItem('pelago-debug', '*')`, and reload:
+
+```text
+[pelago:islands] +700 ms found 3 islands
+[pelago:islands] +700 ms hello-island: loading (eager)
+[pelago:islands] +818 ms cart-drawer: loading (idle, waited 118 ms)
+[pelago:islands] +819 ms announcement-countdown: loading (idle, waited 119 ms)
+[pelago:islands] +827 ms hello-island: mounted in 127 ms
+[pelago:islands] +837 ms announcement-countdown: mounted in 18 ms
+[pelago:islands] +841 ms cart-drawer: mounted in 22 ms
+```
+
+The runtime found the three islands, started the eager one at once, and the two `idle` ones when the browser had a free moment. Each line has an object to expand, with the island's element and its times. Change `data-island="announcement-countdown"` to `announcement-count` in the section and save: the first line now ends with `and "announcement-count" not in the registry`, and the bar keeps its fallback text. Put the name back, and turn the log off with `localStorage.removeItem('pelago-debug')`. The [architecture page](architecture.md#debug-log) lists the lines.
 
 `e2e/islands.spec.ts` has a smoke test for the countdown: it reads the props from the served page, sets the browser's clock to 1 day, 2 hours, 3 minutes and 4 seconds before the end, and expects "Ends in 1d 2h 3m 4s.", then the ended message at the end time.
 

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { normalizePath, type Plugin, type ResolvedConfig, type ViteDevServer } from 'vite'
+import type { DebugArea } from '@pelagojs/islands/debug'
 import type { IslandSize } from '@pelagojs/islands/inspector'
 import { dataIslandSnippet, dataIslandSnippetFile } from '@pelagojs/islands/snippet'
 import { settingsTypes } from './settings.js'
@@ -37,6 +38,13 @@ export interface PelagoOptions {
    * in `vite dev`. Builds never include it. Default: `true`.
    */
   inspector?: boolean
+  /**
+   * Log what the runtime does to the browser's console in `vite dev`, such as each island found, loading and mounted:
+   * `true` for every area, or a list of areas. The lines are `console.debug`, which the browser shows with "Verbose" on.
+   * The `localStorage` key `pelago-debug` turns it on (`*`) or off (`0`) in one browser. Builds never include it.
+   * Default: `false`.
+   */
+  debug?: boolean | DebugArea[]
   /**
    * The strings of the theme's `locales/*.json` for `t()` in `@pelagojs/shopify`, or `false` to leave them out.
    * The plugin finds the `t('…')` calls in the island code and writes `snippets/pelago-translations.liquid`,
@@ -153,8 +161,15 @@ export default function pelago(options: PelagoOptions = {}): Plugin {
     load(id) {
       if (id !== resolvedVirtualId) return
       const islands = findIslands(islandsDir, adapters)
-      const inspector = config.command === 'serve' && options.inspector !== false
-      return registryModule(islands, adapters, inspector ? { sizes: readSizes() } : undefined)
+      const dev = config.command === 'serve'
+      const inspector = dev && options.inspector !== false
+      const debug = options.debug === true ? ['*'] : options.debug || []
+      return registryModule(
+        islands,
+        adapters,
+        inspector ? { sizes: readSizes() } : undefined,
+        dev ? debug : undefined,
+      )
     },
 
     configureServer(server) {
@@ -245,12 +260,14 @@ export function islandName(fileName: string): string {
 
 /**
  * The source of `virtual:islands`. Each adapter is imported lazily, so its framework loads only on pages with its islands.
- * With `inspector`, it also starts the island inspector.
+ * With `inspector`, it also starts the island inspector, and with `debug`, the debug log for those areas
+ * (an empty list still loads it, for its `localStorage` key).
  */
 export function registryModule(
   islands: IslandFile[],
   adapters: Record<string, AdapterImport>,
   inspector?: { sizes?: Record<string, IslandSize> },
+  debug?: string[],
 ): string {
   const used = [...new Set(islands.map((island) => island.extension))]
   const adapterVars = new Map(used.map((extension, i) => [extension, `adapter${i}`]))
@@ -270,6 +287,10 @@ export function registryModule(
   if (inspector) {
     const options = JSON.stringify({ islands: islands.map((island) => island.name), ...inspector })
     lines.push(`import('@pelagojs/islands/inspector').then((m) => m.startInspector(${options}))`)
+  }
+  if (debug) {
+    const options = JSON.stringify({ areas: debug })
+    lines.push(`import('@pelagojs/islands/debug').then((m) => m.startDebug(${options}))`)
   }
   return lines.join('\n') + '\n'
 }
