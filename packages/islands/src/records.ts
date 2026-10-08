@@ -22,28 +22,65 @@ export interface IslandRecord {
   failed?: boolean
 }
 
+/**
+ * Something the runtime did, for its readers: the island inspector, and the debug log (`@pelagojs/islands/debug`).
+ * Internal, like the records. See ADR 008.
+ */
+export type RuntimeEvent = {
+  area: 'islands'
+  /** `performance.now()` when it happened. */
+  time: number
+} & (
+  | {
+      /** A pass over the page or a section scheduled islands, or met names it doesn't know. */
+      type: 'found'
+      root: ParentNode
+      islands: IslandRecord[]
+      /** The `data-island` names with no entry in the registry. */
+      unknown: string[]
+    }
+  // loading: its loading rule fired. cancelled: unmounted before it mounted. unmounted: after.
+  | { type: 'loading' | 'mounted' | 'cancelled' | 'unmounted'; island: IslandRecord }
+  | { type: 'failed'; island: IslandRecord; error: unknown }
+)
+
 interface Shared {
   records: Map<HTMLElement, IslandRecord>
-  listeners: Set<() => void>
+  events: RuntimeEvent[]
+  listeners: Set<(event: RuntimeEvent) => void>
 }
 
 // One set of records per page, whatever the number of copies of this module: Vite's dev server can hand
 // the runtime and the inspector a copy each, when it prebundles them in separate runs.
 const key = Symbol.for('pelago.records')
 const global = globalThis as { [key]?: Shared }
-const shared = (global[key] ??= { records: new Map(), listeners: new Set() })
+const shared: Shared = (global[key] ??= { records: new Map(), events: [], listeners: new Set() })
 
 /** The scheduled and mounted islands. An island leaves when it's unmounted or cancelled. */
 export const records = shared.records
 
+const maxEvents = 200
+
+/** The last events, oldest first, for a reader that starts after the runtime. */
+export const events = shared.events
+
 const listeners = shared.listeners
 
-/** Calls `listener` after each change to `records`. Returns a function that stops it. */
-export function onRecordsChange(listener: () => void): () => void {
+/** Calls `listener` with each event, which is also each change to `records`. Returns a function that stops it. */
+export function onEvent(listener: (event: RuntimeEvent) => void): () => void {
   listeners.add(listener)
   return () => listeners.delete(listener)
 }
 
-export function recordsChanged() {
-  for (const listener of listeners) listener()
+export function emit(event: RuntimeEvent) {
+  events.push(event)
+  if (events.length > maxEvents) events.shift()
+  for (const listener of listeners) {
+    try {
+      listener(event)
+    } catch (error) {
+      // a broken reader must not stop the islands
+      console.error('[pelago] an event listener failed', error)
+    }
+  }
 }
