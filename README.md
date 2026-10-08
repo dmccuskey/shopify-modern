@@ -159,8 +159,10 @@ Pelago works in any Online Store 2.0 theme built with Vite and [`vite-plugin-sho
 
 ```bash
 npm install @pelagojs/islands @pelagojs/shopify @pelagojs/vue vue
-npm install --save-dev @pelagojs/vite-plugin vite vite-plugin-shopify @vitejs/plugin-vue
+npm install --save-dev @pelagojs/vite-plugin vite vite-plugin-shopify @vitejs/plugin-vue typescript@6
 ```
+
+Keep `typescript` at version 6. Vue's compiler needs it to read imported types such as `SectionSettings` in `defineProps`, and it can't load TypeScript 7 yet: without the line, an island with typed settings fails to compile.
 
 Add the plugin to `vite.config.ts`:
 
