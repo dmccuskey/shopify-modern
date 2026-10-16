@@ -25,7 +25,7 @@
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@pelagojs/vite-plugin": "*",
-    "@shopify/cli": "^4.8.2",
+    "@shopify/cli": "4.8.2",
     "@vitejs/plugin-vue": "^6.0.9",
     "npm-run-all2": "^9.0.3",
     "typescript": "~6.0.3",

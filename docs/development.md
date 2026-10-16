@@ -11,6 +11,8 @@ npm install
 npm run check
 ```
 
+`npm install` reports about 19 vulnerabilities (none critical). They are all in development tools, nothing that ships to a store. Most come from versions the Shopify CLI pins, through `@shopify/cli` and `vite-plugin-shopify`. For two of them (`braces` and `sprintf-js`), no fixed version exists. Don't run `npm audit fix --force`: its fixes downgrade `vite-plugin-shopify` and the Shopify CLI by a major version. The example theme also holds `@shopify/cli` at 4.8.2: with 4.9.4, a `shopify theme dev` started without a terminal kept asking for the store password.
+
 `npm run check` runs everything CI runs, in order, and stops at the first failure:
 
 | Command | What it does |
